@@ -1,0 +1,480 @@
+﻿<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Historia Clínica - VIDAFEM</title>
+    <link rel="stylesheet" href="css/dashboard.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+</head>
+<body>
+
+    <div class="overlay" id="overlay"></div>
+
+    <nav class="sidebar" id="sidebar">
+        <div class="toggle-desktop" id="toggleDesktop"><i class="fas fa-chevron-left"></i></div>
+        <div class="sidebar-header">
+            <img src="assets/logo2.png" class="logo-icon" alt="Opciones">
+            <span class="brand-text">Opciones</span>
+        </div>
+        <ul class="sidebar-menu">
+            <li class="menu-item">
+                <a href="admin.html" class="menu-link warning-link">
+                    <i class="fas fa-arrow-left"></i> <span>Salir / Volver</span>
+                </a>
+            </li>
+            <li class="menu-item">
+                <a href="#" class="menu-link active" data-tab="historial" onclick="switchTab('historial')">
+                    <i class="fas fa-user-injured"></i> <span>Historial Clínico</span>
+                </a>
+            </li>
+            <li class="menu-item">
+                <a href="#" class="menu-link" data-tab="citas" onclick="switchTab('citas')">
+                    <i class="fas fa-calendar-alt"></i> <span>Citas Agendadas</span>
+                </a>
+            </li>
+            <li class="menu-item">
+                <a href="#" class="menu-link" data-tab="diagnostico" onclick="switchTab('diagnostico')">
+                    <i class="fas fa-stethoscope"></i> <span>Informes / Recetas / Examenes</span>
+                </a>
+            </li>
+            <li class="menu-item">
+                <a href="#" class="menu-link" data-tab="evolucion" onclick="switchTab('evolucion')">
+                    <i class="fas fa-notes-medical"></i> <span>Evolución del Paciente</span>
+                </a>
+            </li>
+        </ul>
+        <div style="margin-top: auto;">
+            <li class="menu-item">
+                <a href="#" class="menu-link warning-link" id="btnLogout">
+                    <i class="fas fa-sign-out-alt"></i> <span>Cerrar Sesión</span>
+                </a>
+            </li>
+        </div>
+    </nav>
+
+    <div class="main-wrapper">
+        
+        <header class="top-bar">
+            <div class="top-left">
+                <button class="menu-toggle-mobile" id="toggleMobile"><i class="fas fa-bars"></i></button>
+                <div class="user-welcome">
+                    <span class="welcome-label">Paciente:</span>
+        <!--      <span class="user-name-display" id="headerPatientName">Cargando...</span> -->
+                </div>
+            </div>
+            <img src="assets/logo.png" alt="Logo VIDAFEM" class="top-right-logo">
+        </header>
+
+        <div class="dashboard-content">
+            
+            <section class="view-section active">
+                
+                <div class="patient-header-mini">
+                    <div class="mini-info">
+                        <h2 id="clinName">--</h2>
+                        <span class="tag-id" id="clinId">ID: --</span>
+                        <span class="tag-age" id="clinAge">-- años</span>
+                    </div>
+                </div>
+<div id="tab-historial" class="tab-content active">
+                    
+                    <div class="action-header" style="display:flex; justify-content:flex-end; margin-bottom:15px;">
+                        <button class="btn-primary-small" id="btnGlobalEdit" onclick="toggleGlobalEdit()">
+                            <i class="fas fa-edit"></i> Editar Información
+                        </button>
+                    </div>
+
+                    <div class="card history-card">
+                        <div class="card-title">
+                            <i class="fas fa-id-card"></i> Información del Paciente
+                        </div>
+                        <div class="detail-grid">
+                            <div class="detail-item"><label>Nombres y Apellidos</label> <span id="h_nombre">--</span></div>
+                            <div class="detail-item"><label>Cédula</label> <span id="h_cedula">--</span></div>
+                            <div class="detail-item"><label>Edad</label> <span id="h_edad">--</span></div>
+                            <div class="detail-item"><label>F. Nacimiento</label> <span id="h_fecha">--</span></div>
+                            <div class="detail-item"><label>Ocupación</label> <span id="h_ocupacion">--</span></div>
+                            <div class="detail-item"><label>Dirección</label> <span id="h_direccion">--</span></div>
+                        </div>
+                    </div>
+
+                    <form id="formHistory">
+                        
+                        <div class="card history-card">
+                            <div class="card-title">
+                                <i class="fas fa-file-medical-alt"></i> Antecedentes Patológicos
+                            </div>
+                            <div class="detail-grid">
+                                <div class="detail-item">
+                                    <label>APP (Patológicos Personales)</label>
+                                    <textarea name="app" class="input-field history-input" rows="2" disabled></textarea>
+                                </div>
+                                <div class="detail-item">
+                                    <label>APF (Patológicos Familiares)</label>
+                                    <textarea name="apf" class="input-field history-input" rows="2" disabled></textarea>
+                                </div>
+                                <div class="detail-item">
+                                    <label>ALERGIAS</label>
+                                    <textarea name="alergias" class="input-field history-input" rows="2" disabled></textarea>
+                                </div>
+                                <div class="detail-item">
+                                    <label>AQX (Quirúrgicos)</label>
+                                    <textarea name="aqx" class="input-field history-input" rows="2" disabled></textarea>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="card history-card">
+                            <div class="card-title">
+                                <i class="fas fa-venus"></i> Antecedentes Gineco-Obstétricos
+                            </div>
+                            
+                            <div class="detail-grid" style="grid-template-columns: repeat(3, 1fr);">
+                                <div class="detail-item">
+                                    <label>Menarquia (Edad)</label> 
+                                    <input type="text" name="menarquia" class="input-field history-input" disabled>
+                                </div>
+                                <div class="detail-item">
+                                    <label>1era Relación Sexual</label> 
+                                    <input type="text" name="prs" class="input-field history-input" disabled>
+                                </div>
+                                <div class="detail-item">
+                                    <label>N° Parejas Sexuales</label> 
+                                    <input type="number" name="num_parejas" class="input-field history-input" disabled>
+                                </div>
+                            </div>
+
+                            <div style="margin-top:20px; border-top:1px solid #eee; padding-top:15px;">
+                                <label style="font-weight:bold; color:#555; margin-bottom:10px; display:block;">AGO</label>
+                                <div style="display:flex; gap:15px; flex-wrap:wrap;">
+                                    <div class="tiny-group">
+                                        <span>G:</span> <input type="number" name="ago_g" class="history-input tiny-input" placeholder="0" disabled>
+                                    </div>
+                                    <div class="tiny-group">
+                                        <span>P:</span> <input type="number" name="ago_p" class="history-input tiny-input" placeholder="0" disabled>
+                                    </div>
+                                    <div class="tiny-group">
+                                        <span>C:</span> <input type="number" name="ago_c" class="history-input tiny-input" placeholder="0" disabled>
+                                    </div>
+                                    <div class="tiny-group">
+                                        <span>A:</span> <input type="number" name="ago_a" class="history-input tiny-input" placeholder="0" disabled>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="detail-grid" style="margin-top:15px;">
+                                <div class="detail-item full-width">
+                                    <label>Fecha de Último Embarazo</label>
+                                    <div class="flex-date-checks">
+                                        <input type="date" name="fecha_aborto" class="input-field history-input" style="max-width:200px;" disabled>
+                                        
+                                        <div style="display:flex; gap:10px;">
+                                            <label class="check-pill">
+                                                <input type="radio" name="tipo_ultimo" value="Parto" class="history-input" disabled> Parto
+                                            </label>
+                                            <label class="check-pill">
+                                                <input type="radio" name="tipo_ultimo" value="Aborto" class="history-input" disabled> Aborto
+                                            </label>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div class="detail-item"><label>PAP (Papanicolau)</label> <input type="text" name="pap" class="input-field history-input" disabled></div>
+                                <div class="detail-item"><label>FUM (Última Menstruación)</label> <input type="date" name="fum" class="input-field history-input" disabled></div>
+                                <div class="detail-item">
+                                    <label>Anticonceptivos</label> 
+                                    <select name="anticonceptivos" class="input-field history-input" disabled>
+                                        <option value="No">No</option>
+                                        <option value="Si">Si</option>
+                                    </select>
+                                </div>
+                                <div class="detail-item"><label>Tipo Anticonceptivo</label> <input type="text" name="tipo_anti" class="input-field history-input" disabled></div>
+                                <div class="detail-item"><label>Tiempo de Uso</label> <input type="text" name="tiempo_uso" class="input-field history-input" disabled></div>
+                            </div>
+                        </div>
+
+                    </form> </div>
+
+                <div id="tab-citas" class="tab-content">
+                    <div class="action-bar-right">
+                        <button class="btn-primary-small" type="button" id="appointmentsBulkToggleBtn" onclick="togglePatientBulkMode('citas')" style="background:#6c7a89;">
+                            <i class="fas fa-check-square"></i> Seleccionar Varias
+                        </button>
+                        <button class="btn-primary-small" onclick="openAppointmentModal()">
+                            <i class="fas fa-plus"></i> Agendar Nueva Cita
+                        </button>
+                    </div>
+                    <div id="appointmentsBulkBar" class="patient-bulk-bar">
+                        <button type="button" class="btn-primary-small" style="background:#4c5b6b;" onclick="selectAllPatientBulkItems('citas')">
+                            <i class="fas fa-check-double"></i> Seleccionar Todas
+                        </button>
+                        <button type="button" class="btn-primary-small" style="background:#7f8c8d;" onclick="selectOldPatientAppointments()">
+                            <i class="fas fa-history"></i> Seleccionar Antiguas
+                        </button>
+                        <button type="button" class="btn-primary-small" style="background:#95a5a6;" onclick="clearPatientBulkSelection('citas')">
+                            <i class="fas fa-eraser"></i> Limpiar
+                        </button>
+                        <button type="button" class="btn-primary-small" id="appointmentsBulkDeleteBtn" style="background:#c0392b;" onclick="deleteSelectedPatientItems('citas')">
+                            <i class="fas fa-trash"></i> Eliminar Seleccionadas (0)
+                        </button>
+                        <button type="button" class="btn-primary-small" style="background:#666;" onclick="togglePatientBulkMode('citas', false)">
+                            Cancelar
+                        </button>
+                    </div>
+                    <div class="clinical-timeline-container">
+                        <div class="empty-state">
+                            <i class="fas fa-calendar-check"></i>
+                            <p>No hay citas registradas.</p>
+                        </div>
+                    </div>
+                </div>
+
+                <div id="tab-diagnostico" class="tab-content">
+                    
+                    <div class="action-bar-right" style="margin-bottom: 20px;">
+                        <button class="btn-primary-small" type="button" id="diagnosisBulkToggleBtn" onclick="togglePatientBulkMode('diagnosticos')" style="background:#6c7a89;">
+                            <i class="fas fa-check-square"></i> Seleccionar Varias
+                        </button>
+                        <button class="btn-primary-small" onclick="goToNewDiagnosis()" style="padding: 12px 25px; font-size: 1rem;">
+                            <i class="fas fa-plus-circle"></i> AGREGAR NUEVO DIAGNÓSTICO / RECETA
+                        </button>
+                    </div>
+                    <div id="diagnosisBulkBar" class="patient-bulk-bar">
+                        <button type="button" class="btn-primary-small" style="background:#4c5b6b;" onclick="selectAllPatientBulkItems('diagnosticos')">
+                            <i class="fas fa-check-double"></i> Seleccionar Todos
+                        </button>
+                        <button type="button" class="btn-primary-small" style="background:#95a5a6;" onclick="clearPatientBulkSelection('diagnosticos')">
+                            <i class="fas fa-eraser"></i> Limpiar
+                        </button>
+                        <button type="button" class="btn-primary-small" id="diagnosisBulkDeleteBtn" style="background:#c0392b;" onclick="deleteSelectedPatientItems('diagnosticos')">
+                            <i class="fas fa-trash"></i> Eliminar Seleccionados (0)
+                        </button>
+                        <button type="button" class="btn-primary-small" style="background:#666;" onclick="togglePatientBulkMode('diagnosticos', false)">
+                            Cancelar
+                        </button>
+                    </div>
+
+                    <h3 style="color:var(--c-primary); border-bottom: 2px solid #eee; padding-bottom:10px;">Historial de Reportes</h3>
+                    
+                    <div id="diagnosisHistoryList" class="cards-grid" style="margin-top: 15px;">
+                        <p style="color:#888;">Cargando historial...</p>
+                    </div>
+
+                </div>
+
+                <div id="tab-evolucion" class="tab-content">
+                    <div class="action-bar-right" style="margin-bottom: 20px; gap:10px; flex-wrap:wrap;">
+                        <button class="btn-primary-small" type="button" id="evolutionBulkToggleBtn" onclick="togglePatientBulkMode('evolucion')" style="background:#6c7a89;">
+                            <i class="fas fa-check-square"></i> Seleccionar Varias
+                        </button>
+                        <button class="btn-primary-small" type="button" onclick="downloadPatientEvolutionPdf()" style="background:#8e44ad;">
+                            <i class="fas fa-file-pdf"></i> Descargar PDF
+                        </button>
+                        <button class="btn-primary-small" onclick="openEvolutionCreateModal()" style="padding: 12px 25px; font-size: 1rem;">
+                            <i class="fas fa-plus-circle"></i> AGREGAR EVOLUCIÓN
+                        </button>
+                    </div>
+                    <div id="evolutionBulkBar" class="patient-bulk-bar">
+                        <button type="button" class="btn-primary-small" style="background:#4c5b6b;" onclick="selectAllPatientBulkItems('evolucion')">
+                            <i class="fas fa-check-double"></i> Seleccionar Todas
+                        </button>
+                        <button type="button" class="btn-primary-small" style="background:#95a5a6;" onclick="clearPatientBulkSelection('evolucion')">
+                            <i class="fas fa-eraser"></i> Limpiar
+                        </button>
+                        <button type="button" class="btn-primary-small" id="evolutionBulkDeleteBtn" style="background:#c0392b;" onclick="deleteSelectedPatientItems('evolucion')">
+                            <i class="fas fa-trash"></i> Eliminar Seleccionadas (0)
+                        </button>
+                        <button type="button" class="btn-primary-small" style="background:#666;" onclick="togglePatientBulkMode('evolucion', false)">
+                            Cancelar
+                        </button>
+                    </div>
+
+                    <h3 style="color:var(--c-primary); border-bottom: 2px solid #eee; padding-bottom:10px;">Bitácora de Evolución</h3>
+
+                    <div id="evolutionHistoryList" class="cards-grid" style="margin-top: 15px;">
+                        <p style="color:#888;">Cargando evolución...</p>
+                    </div>
+                </div>
+
+            </section>
+        </div>
+    </div>
+
+    <div class="modal-overlay" id="modalAppointment">
+        <div class="modal-box modal-box-fancy">
+            <div class="modal-header modal-header-fancy">
+                <h3>Agendar Cita</h3>
+                <span class="close-modal" onclick="closeModal('modalAppointment')">&times;</span>
+            </div>
+            <div class="modal-body">
+                <form id="formAppointment">
+                    <input type="hidden" id="apptPatientId">
+                    <div class="form-group">
+                        <label>Servicio</label>
+                        <select id="apptReason" style="width:100%; padding:10px; border-radius:8px; border:1px solid #ddd;">
+                            <option>Cargando...</option>
+                        </select>
+                    </div>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label>Fecha</label> <input type="date" id="apptDate" required disabled>
+                        </div>
+                        <div class="form-group">
+                            <label>Hora</label> <select id="apptTime" required disabled style="width:100%; padding:10px; border-radius:8px; border:1px solid #ddd;"><option value="">Elige servicio primero...</option></select>
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label>Nota Interna</label> <textarea id="apptNotes" rows="2" style="width:100%; border:1px solid #ddd; border-radius:8px;"></textarea>
+                    </div>
+                    <div class="form-group" style="background:#fff8e1; padding:10px; border-radius:8px; margin-top:10px;">
+                        <label style="color:#d35400;">Recomendaciones</label> <textarea id="apptRecs" rows="2" style="width:100%; border:1px solid #ffecb3; border-radius:8px;"></textarea>
+                    </div>
+                    <button type="submit" class="btn-submit">Confirmar</button>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal-overlay" id="modalReschedule">
+        <div class="modal-box modal-box-fancy" style="max-width: 400px;">
+            <div class="modal-header modal-header-fancy" style="--mh-bg: linear-gradient(135deg, #f39c12, #f5b041);">
+                <h3>Reagendar Cita</h3>
+                <span class="close-modal" onclick="closeModal('modalReschedule')">&times;</span>
+            </div>
+            <div class="modal-body">
+                <form id="formReschedule">
+                    <input type="hidden" id="reschIdCita">
+                    <div class="form-group">
+                        <label>Nueva Fecha</label>
+                        <input type="date" id="reschDate" required>
+                    </div>
+                    <div class="form-group">
+                        <label>Nueva Hora</label>
+                        <select id="reschTime" required style="width:100%; padding:10px; border:1px solid #ddd; border-radius:8px;"><option value="">Selecciona fecha...</option></select>
+                    </div>
+                    <button type="submit" class="btn-submit" style="background: #f39c12;">Guardar Cambios</button>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal-overlay" id="modalSuccessAppt">
+        <div class="modal-box success-box" style="max-width: 500px;">
+            <div class="success-icon">
+                <i class="fas fa-check-circle"></i>
+            </div>
+            <h3 id="successApptTitle">¡Cita agendada!</h3>
+            <p id="successApptText">La cita se ha guardado correctamente en el sistema.</p>
+            
+            <div style="margin: 20px 0; display:flex; gap:10px; flex-direction:column;">
+                <a id="btnWaSuccess" href="#" target="_blank" class="btn-submit" style="background-color: #25D366; text-align:center; text-decoration:none; display:flex; align-items:center; justify-content:center; gap:10px;">
+                    <i class="fab fa-whatsapp" style="font-size:1.2rem;"></i> Enviar Comprobante por WhatsApp
+                </a>
+                
+                <button class="btn-primary-small" onclick="closeModal('modalSuccessAppt')" style="background:#666; margin-top:5px;">
+                    Cerrar Ventana
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal-overlay" id="modalEvolutionForm">
+        <div class="modal-box modal-box-fancy" style="max-width: 760px;">
+            <div class="modal-header modal-header-fancy">
+                <h3 id="evolutionFormTitle">Nueva Evolución del Paciente</h3>
+                <span class="close-modal" onclick="closeModal('modalEvolutionForm')">&times;</span>
+            </div>
+            <div class="modal-body">
+                <form id="formEvolution">
+                    <input type="hidden" id="evolutionEntryId">
+                    <div class="form-group">
+                        <label>Fecha y hora de atencion</label>
+                        <input type="datetime-local" id="evolutionDateTime" class="input-field" required>
+                    </div>
+                    <div class="form-group">
+                        <label>Motivo de Consulta</label>
+                        <textarea id="evolutionReason" rows="3" class="input-field" required></textarea>
+                    </div>
+                    <div class="form-group">
+                        <label>Evolución</label>
+                        <textarea id="evolutionProgress" rows="4" class="input-field" required></textarea>
+                    </div>
+                    <div class="detail-grid">
+                        <div class="detail-item">
+                            <label>Diagnóstico</label>
+                            <textarea id="evolutionDiagnosis" rows="4" class="input-field" required></textarea>
+                        </div>
+                        <div class="detail-item">
+                            <label>Tratamiento</label>
+                            <textarea id="evolutionTreatment" rows="4" class="input-field" required></textarea>
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label>Sugerencias</label>
+                        <textarea id="evolutionSuggestions" rows="3" class="input-field"></textarea>
+                    </div>
+                    <button type="submit" class="btn-submit" id="evolutionSubmitBtn">Guardar Evolución</button>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal-overlay" id="modalEvolutionDetail">
+        <div class="modal-box modal-box-fancy" style="max-width: 760px;">
+            <div class="modal-header modal-header-fancy" style="--mh-bg: linear-gradient(135deg, #4c2b76, #36235d);">
+                <h3 id="evolutionDetailTitle">Consulta</h3>
+                <span class="close-modal" onclick="closeModal('modalEvolutionDetail')">&times;</span>
+            </div>
+            <div class="modal-body">
+                <div class="evolution-detail-meta">
+                    <span><i class="far fa-calendar-alt"></i> <strong>Fecha:</strong> <span id="evolutionDetailDate">--</span></span>
+                </div>
+                <div class="evolution-detail-block">
+                    <label>Motivo de Consulta</label>
+                    <div id="evolutionDetailReason" class="evolution-detail-text">--</div>
+                </div>
+                <div class="evolution-detail-block">
+                    <label>Evolución</label>
+                    <div id="evolutionDetailProgress" class="evolution-detail-text">--</div>
+                </div>
+                <div class="detail-grid">
+                    <div class="evolution-detail-block">
+                        <label>Diagnóstico</label>
+                        <div id="evolutionDetailDiagnosis" class="evolution-detail-text">--</div>
+                    </div>
+                    <div class="evolution-detail-block">
+                        <label>Tratamiento</label>
+                        <div id="evolutionDetailTreatment" class="evolution-detail-text">--</div>
+                    </div>
+                </div>
+                <div class="evolution-detail-block">
+                    <label>Sugerencias</label>
+                    <div id="evolutionDetailSuggestions" class="evolution-detail-text">--</div>
+                </div>
+
+                <div class="evolution-detail-actions">
+                    <button type="button" class="btn-primary-small" onclick="editEvolutionFromDetail()">
+                        <i class="fas fa-edit"></i> Editar
+                    </button>
+                    <button type="button" class="btn-primary-small" style="background:#c0392b;" onclick="deleteEvolutionFromDetail()">
+                        <i class="fas fa-trash"></i> Eliminar
+                    </button>
+                    <button type="button" class="btn-primary-small" style="background:#666;" onclick="closeModal('modalEvolutionDetail')">
+                        Cerrar
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="js/notify.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script src="js/config.js"></script>
+    <script src="js/sidebar.js"></script>
+    <script src="js/clinical.js"></script>
+    <script src="js/history.js"></script>
+    <script src="js/evolution.js"></script>
+    </body>
+</html>
+
