@@ -1,0 +1,204 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Superadmin - VIDAFEM</title>
+  <link rel="stylesheet" href="css/dashboard.css">
+  <link rel="stylesheet" href="css/superadmin.css">
+  <link rel="stylesheet" href="css/service_builder_v2.css">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+</head>
+<body>
+  <div class="sa-mobile-top">
+    <button id="saMenuToggle" class="sa-menu-toggle" aria-label="Abrir menu" aria-expanded="false">
+      <i class="fas fa-bars"></i>
+    </button>
+    <div class="sa-mobile-title">
+      <strong>Superadmin</strong>
+      <small id="saWelcomeMobile">Cargando sesion...</small>
+    </div>
+  </div>
+
+  <div id="saSidebarOverlay" class="sa-sidebar-overlay"></div>
+
+  <div class="sa-wrap sa-layout">
+    <aside id="saSidebar" class="card sa-sidebar">
+      <div class="sa-sidebar-head">
+        <h2>Superadmin</h2>
+        <p id="saWelcome">Cargando sesion...</p>
+        <small class="sa-sidebar-meta">Gestion centralizada</small>
+        <button id="saSidebarClose" class="sa-sidebar-close" aria-label="Cerrar menu">
+          <i class="fas fa-times"></i>
+        </button>
+      </div>
+      <nav class="sa-nav">
+        <button class="sa-nav-btn active" data-view="doctors">
+          <i class="fas fa-user-md"></i>
+          <span>Medicos</span>
+        </button>
+        <button class="sa-nav-btn" data-view="patients">
+          <i class="fas fa-users"></i>
+          <span>Pacientes</span>
+        </button>
+        <button class="sa-nav-btn" data-view="services">
+          <i class="fas fa-layer-group"></i>
+          <span>Servicios</span>
+        </button>
+      </nav>
+      <div class="sa-sidebar-footer">
+        <button id="btnRefresh" class="sa-sidebar-action">
+          <i class="fas fa-rotate"></i>
+          <span>Actualizar</span>
+        </button>
+        <button id="btnLogout" class="sa-sidebar-action danger">
+          <i class="fas fa-sign-out-alt"></i>
+          <span>Cerrar sesion</span>
+        </button>
+      </div>
+    </aside>
+
+    <main class="sa-main">
+      <section id="view-doctors" class="sa-view">
+        <section class="card sa-card">
+          <div class="sa-title">
+            <h2>Medicos</h2>
+            <button id="btnNewDoctor" class="btn-primary-small"><i class="fas fa-user-plus"></i> Nuevo medico</button>
+          </div>
+          <div class="table-container">
+            <table class="datatable">
+              <thead>
+                <tr>
+                  <th>Nombre</th>
+                  <th>Usuario</th>
+                  <th>Rol</th>
+                  <th>Correo notif.</th>
+                  <th>Telefono</th>
+                  <th>Accion</th>
+                </tr>
+              </thead>
+              <tbody id="doctorsTbody"></tbody>
+            </table>
+          </div>
+        </section>
+      </section>
+
+      <section id="view-patients" class="sa-view" style="display:none;">
+        <section class="card sa-card">
+          <div class="sa-title">
+            <h2>Pacientes y Medico Asignado</h2>
+            <input id="patientSearch" class="input-field sa-search" placeholder="Buscar por nombre o cedula">
+          </div>
+          <div class="table-container">
+            <table class="datatable">
+              <thead>
+                <tr>
+                  <th>Cedula</th>
+                  <th>Paciente</th>
+                  <th>Medico Actual</th>
+                  <th>Accion</th>
+                </tr>
+              </thead>
+              <tbody id="patientsTbody"></tbody>
+            </table>
+          </div>
+        </section>
+      </section>
+
+      <section id="view-services" class="sa-view" style="display:none;">
+        <section class="card sa-card">
+          <div class="sa-title">
+            <h2>Servicios (Permisos Totales)</h2>
+            <button id="btnNewService" class="btn-primary-small">
+              <i class="fas fa-plus-circle"></i> Nuevo servicio
+            </button>
+          </div>
+          <div class="sa-services-scroll">
+            <ul id="servicesList" class="sa-services-list">
+              <li class="sa-services-empty">Cargando...</li>
+            </ul>
+          </div>
+        </section>
+      </section>
+    </main>
+  </div>
+
+  <div class="modal-overlay" id="doctorModal">
+    <div class="modal-box modal-box-fancy">
+      <div class="modal-header modal-header-fancy">
+        <h3 id="doctorModalTitle">Editar Medico</h3>
+        <span class="close-modal" id="closeDoctorModal">&times;</span>
+      </div>
+      <div class="modal-body">
+        <form id="doctorForm">
+          <input type="hidden" id="doctorMode" value="edit">
+          <input type="hidden" id="oldUsuario">
+          <div class="form-row">
+            <div class="form-group">
+              <label>Nombre medico</label>
+              <input id="doctorNombre" class="input-field" required data-format-hint="Se guardara en MAYUSCULAS.">
+            </div>
+            <div class="form-group">
+              <label>Usuario</label>
+              <input id="doctorUsuario" class="input-field" required data-format-hint="Se guardara en minusculas (letras).">
+            </div>
+          </div>
+          <div class="form-row">
+            <div class="form-group">
+              <label>Contrasena</label>
+              <input id="doctorPassword" class="input-field" required data-format-hint="La contrasena se respeta tal como la escribas.">
+            </div>
+            <div class="form-group">
+              <label>Correo</label>
+              <input id="doctorCorreoNotificaciones" class="input-field" data-format-hint="Se guardara en minusculas.">
+            </div>
+            <div class="form-group">
+              <label>Rol</label>
+              <input id="doctorRol" class="input-field" placeholder="DOCTOR" data-format-hint="Se guardara en MAYUSCULAS.">
+            </div>
+            <div class="form-group">
+              <label>Telefono</label>
+              <input id="doctorTelefono" class="input-field" data-format-hint="Solo se permiten numeros.">
+            </div>
+          </div>
+          <button id="btnSaveDoctor" class="btn-submit" type="submit">Guardar cambios</button>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <div class="modal-overlay" id="patientManageModal">
+    <div class="modal-box modal-box-fancy">
+      <div class="modal-header modal-header-fancy">
+        <h3>Modificar paciente</h3>
+        <span class="close-modal" id="closePatientManageModal">&times;</span>
+      </div>
+      <div class="modal-body">
+        <form id="patientManageForm">
+          <input type="hidden" id="managePatientId">
+          <div class="form-row">
+            <div class="form-group">
+              <label>Paciente</label>
+              <input id="managePatientName" class="input-field" disabled>
+            </div>
+            <div class="form-group">
+              <label>Medico tratante</label>
+              <select id="managePatientDoctor" class="sa-select"></select>
+            </div>
+            <div class="form-group">
+              <label>Nueva contrasena (opcional)</label>
+              <input id="managePatientPassword" class="input-field" placeholder="Solo si desea cambiarla">
+            </div>
+          </div>
+          <button id="btnSavePatientManage" class="btn-submit" type="submit">Guardar cambios</button>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <script src="js/notify.js"></script>
+  <script src="js/config.js"></script>
+  <script src="js/superadmin.js"></script>
+  <script src="js/service_builder_v2.js"></script>
+</body>
+</html>

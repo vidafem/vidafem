@@ -1,0 +1,922 @@
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Panel Médico - VIDAFEM</title>
+
+    <link rel="stylesheet" href="css/dashboard.css">
+    <link rel="stylesheet" href="css/service_builder_v2.css">
+
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+</head>
+
+<body>
+
+    <div class="overlay" id="overlay"></div>
+
+    <nav class="sidebar" id="sidebar">
+
+        <div class="toggle-desktop" id="toggleDesktop">
+            <i class="fas fa-chevron-left"></i>
+        </div>
+
+        <div class="sidebar-header">
+            <img src="assets/logo2.png" class="logo-icon" alt="Opciones">
+            <span class="brand-text">Opciones</span>
+        </div>
+
+        <ul class="sidebar-menu">
+            <li class="menu-item">
+                <a href="#" class="menu-link active">
+                    <i class="fas fa-home"></i>
+                    <span>Inicio</span>
+                </a>
+                <span class="tooltip-text">Inicio General</span>
+            </li>
+
+            <li class="menu-item">
+                <a href="#" class="menu-link">
+                    <i class="fas fa-user-circle"></i>
+                    <span>Perfil</span>
+                </a>
+                <span class="tooltip-text">Mi Perfil</span>
+            </li>
+
+            <li class="menu-item">
+                <a href="#" class="menu-link">
+                    <i class="fas fa-user-injured"></i>
+                    <span>Pacientes</span>
+                </a>
+                <span class="tooltip-text">Gestión de Pacientes</span>
+            </li>
+
+            <li class="menu-item">
+                <a href="#" class="menu-link">
+                    <i class="fas fa-calendar-alt"></i>
+                    <span>Agenda</span>
+                </a>
+                <span class="tooltip-text">Citas y Horarios</span>
+            </li>
+
+            <li class="menu-item">
+                <a href="#" class="menu-link">
+                    <i class="fas fa-bullhorn"></i> <span>Infografia / promociones</span>
+                </a>
+                <span class="tooltip-text">Configurar Ofertas</span>
+            </li>
+            <li class="menu-item">
+                <a href="#" class="menu-link">
+                    <i class="fas fa-concierge-bell"></i>
+                    <span>Tipo de Servicio</span>
+                </a>
+                <span class="tooltip-text">Configurar Servicios</span>
+            </li>
+        </ul>
+
+        <div style="margin-top: auto;">
+            <li class="menu-item">
+                <a href="#" class="menu-link" id="btnLogout" style="color: #ffb5b5;">
+                    <i class="fas fa-sign-out-alt"></i>
+                    <span>Salir</span>
+                </a>
+                <span class="tooltip-text">Cerrar Sesión</span>
+            </li>
+        </div>
+    </nav>
+
+
+    <div class="main-wrapper">
+
+        <header class="top-bar">
+
+            <div class="top-left">
+                <button class="menu-toggle-mobile" id="toggleMobile">
+                    <i class="fas fa-bars"></i>
+                </button>
+
+                <div class="user-welcome">
+                    <span class="welcome-label">Bienvenido/a,</span>
+                    <span class="user-name-display" id="adminNameDisplay">Cargando...</span>
+                </div>
+            </div>
+
+            <img src="assets/logo.png" alt="Logo VIDAFEM" class="top-right-logo">
+
+        </header>
+
+        <div class="dashboard-content">
+
+            <section id="view-home" class="view-section active">
+                <div class="section-title">Resumen General</div>
+
+                <div class="doctor-home-layout">
+                    <div class="doctor-home-media">
+                        <div class="doctor-home-infographic-shell">
+                            <div class="doctor-home-infographic-header">
+                                <div id="doctorInfographicPreviewMeta" class="doctor-home-infographic-meta"></div>
+                                <button type="button" id="btnOpenHomeInfographicEditor" class="btn-primary-small doctor-home-infographic-edit" onclick="openDoctorInfographicEditorFromHome()">
+                                    <i class="fas fa-pen"></i> Editar infografia
+                                </button>
+                            </div>
+
+                            <div id="doctorInfographicEmptyState" class="doctor-home-infographic-empty">
+                                <i class="far fa-images"></i>
+                                <p>Cargando tu vista previa...</p>
+                            </div>
+
+                            <div id="doctorInfographicWrap" class="patient-infographic-wrap doctor-home-infographic-wrap" style="display:none;">
+                                <div class="patient-infographic-stage" id="doctorInfographicStage"></div>
+                                <button type="button" class="patient-infographic-nav prev" id="btnDoctorInfPrev" aria-label="Anterior">
+                                    <i class="fas fa-chevron-left"></i>
+                                </button>
+                                <button type="button" class="patient-infographic-nav next" id="btnDoctorInfNext" aria-label="Siguiente">
+                                    <i class="fas fa-chevron-right"></i>
+                                </button>
+                                <div class="patient-infographic-dots" id="doctorInfDots"></div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <aside class="doctor-home-sidebar">
+                        <div class="cards-grid doctor-home-cards-grid">
+                            <div class="card dashboard-nav-card" id="dashboardCardPatients">
+                                <div class="card-icon"><i class="fas fa-users"></i></div>
+                                <h3>Pacientes Totales</h3>
+                                <div class="value" id="stat-total-patients">--</div>
+                            </div>
+
+                            <div class="card dashboard-nav-card" id="dashboardCardToday">
+                                <div class="card-icon"><i class="fas fa-calendar-day"></i></div>
+                                <h3>Citas Hoy</h3>
+                                <div class="value" id="stat-citas-hoy">0</div>
+                            </div>
+
+                            <div class="card dashboard-nav-card" id="dashboardCardWeek" style="border-bottom: 4px solid #2ecc71;">
+                                <div class="card-icon" style="color: #2ecc71; background: #e8f8f5;">
+                                    <i class="fas fa-calendar-week"></i>
+                                </div>
+                                <h3>Citas Semana (Lun-Sab)</h3>
+                                <div class="value" id="stat-citas-semana">0</div>
+                            </div>
+
+                            <div class="card dashboard-nav-card dashboard-action-card" id="dashboardCardCreatePatient" onclick="openCreateModal()">
+                                <div class="card-icon">
+                                    <i class="fas fa-user-plus"></i>
+                                </div>
+                                <h3>Nuevo Paciente</h3>
+                                <div class="value">Agregar</div>
+                                <p>Abre el formulario para registrar un nuevo paciente.</p>
+                            </div>
+                        </div>
+                    </aside>
+                </div>
+
+            </section>
+
+            <section id="view-profile" class="view-section" style="display: none;">
+                <h2 class="section-title">Mi Perfil</h2>
+
+                <div class="card history-card">
+                    <div class="card-title" style="display:flex; justify-content:space-between; align-items:center; gap:10px; flex-wrap:wrap;">
+                        <span><i class="fas fa-user-md"></i> Datos del medico</span>
+                        <button type="button" class="btn-primary-small" id="btnEditDoctorProfile">
+                            <i class="fas fa-pen"></i> Editar datos
+                        </button>
+                    </div>
+                    <div class="detail-grid">
+                        <div class="detail-item"><label>Nombre</label> <span id="profileDoctorName">--</span></div>
+                        <div class="detail-item"><label>Usuario</label> <span id="profileDoctorUser">--</span></div>
+                        <div class="detail-item"><label>Rol</label> <span id="profileDoctorRole">--</span></div>
+                        <div class="detail-item"><label>Correo</label> <span id="profileDoctorEmail">--</span></div>
+                        <div class="detail-item"><label>Telefono</label> <span id="profileDoctorPhone">--</span></div>
+                        <div class="detail-item"><label>Registro sanitario</label> <span id="profileDoctorRegister">--</span></div>
+                        <div class="detail-item"><label>Firma virtual</label> <span id="profileDoctorSignaturePref">ACTIVA</span></div>
+                    </div>
+                </div>
+
+                <div class="card" style="max-width: 520px;">
+                    <div class="card-title">
+                        <i class="fas fa-key"></i> Cambiar contrasena
+                    </div>
+                    <p style="color:#666; font-size:0.9rem; margin-top:0;">Solo puedes actualizar tu contrasena.</p>
+                    <form id="formProfilePassword">
+                        <div class="form-group">
+                            <label>Nueva contrasena</label>
+                            <input type="password" id="profileNewPassword" class="input-field" required>
+                        </div>
+                        <div class="form-group">
+                            <label>Confirmar contrasena</label>
+                            <input type="password" id="profileConfirmPassword" class="input-field" required>
+                        </div>
+                        <button type="submit" class="btn-submit">Actualizar contrasena</button>
+                    </form>
+                </div>
+
+                <div class="card history-card" style="margin-top:20px;">
+                    <div class="card-title" style="display:flex; justify-content:space-between; align-items:center; gap:10px; flex-wrap:wrap;">
+                        <span><i class="fas fa-umbrella-beach"></i> Vacaciones</span>
+                        <button type="button" class="btn-primary-small" id="btnOpenDoctorVacation">
+                            <i class="fas fa-calendar-alt"></i> Configurar aviso
+                        </button>
+                    </div>
+                    <div id="doctorVacationStatusBox" style="font-size:0.95rem; color:#555;">
+                        No hay vacaciones activas.
+                    </div>
+                </div>
+            </section>
+
+            <section id="view-patients" class="view-section" style="display: none;">
+
+                <h2 class="section-title">Gestión de Pacientes</h2>
+
+                <div class="patients-toolbar">
+                    <div class="search-box">
+                        <i class="fas fa-search"></i>
+                        <input type="text" id="searchInput" placeholder="Buscar por cédula, nombre...">
+                    </div>
+
+                    <button class="btn-primary-small" onclick="openCreateModal()">
+                        <i class="fas fa-plus"></i> Registrar Nuevo
+                    </button>
+                </div>
+
+                <div class="table-container">
+                    <table class="datatable">
+                        <thead>
+                            <tr>
+                                <th>Cédula</th>
+                                <th>Nombre Paciente</th>
+                                <th>Edad</th>
+                                <th>Teléfono</th>
+                                <th>Acciones</th>
+                            </tr>
+                        </thead>
+                        <tbody id="patientsTableBody">
+                        </tbody>
+                    </table>
+                    <p id="tableInfo" style="text-align:center; color:#999; font-size:0.8rem; margin-top:10px;">
+                        Mostrando los últimos registros
+                    </p>
+                </div>
+            </section>
+            <!-- seccion de infografias y promociones -->
+            <section id="view-promotions" class="view-section" style="display: none;">
+                <h2 class="section-title">Infografia / promociones</h2>
+
+                <div id="promoHubSelector" class="promo-hub-grid">
+                    <button type="button" id="promoHubCardInfographic" class="promo-hub-card">
+                        <i class="fas fa-images"></i>
+                        <h3>Infografia</h3>
+                        <p>Configura publicaciones visuales con imagen, texto y acciones.</p>
+                    </button>
+                    <button type="button" id="promoHubCardPromo" class="promo-hub-card">
+                        <i class="fas fa-bullhorn"></i>
+                        <h3>Promociones</h3>
+                        <p>Publica promociones por fecha y define si aplica a todos o solo tus pacientes.</p>
+                    </button>
+                </div>
+
+                <div id="promoPanelPromotions" class="card promo-config-panel" style="display:none; max-width: 760px; margin: 0 auto;">
+                    <div style="display:flex; justify-content:space-between; align-items:center; gap:10px; flex-wrap:wrap; margin-bottom:10px;">
+                        <h3 style="margin:0;"><i class="fas fa-bullhorn"></i> Configurar promociones</h3>
+                        <button type="button" class="btn-primary-small" id="btnBackFromPromoPanel" style="background:#7f8c8d;">
+                            Volver
+                        </button>
+                    </div>
+
+                    <form id="formPromo" style="text-align: left;">
+                        <div class="form-group">
+                            <label>Texto de la promocion</label>
+                            <textarea id="promoMsg" rows="3" class="input-field" placeholder="Ej: 2x1 en consultas ginecologicas por tiempo limitado." required></textarea>
+                        </div>
+
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label>Fecha inicio</label>
+                                <input type="date" id="promoStart" class="input-field" required>
+                            </div>
+                            <div class="form-group">
+                                <label>Fecha fin</label>
+                                <input type="date" id="promoEnd" class="input-field" required>
+                            </div>
+                        </div>
+
+                        <div class="form-group">
+                            <label>Visibilidad</label>
+                            <select id="promoScope" class="input-field" style="background:white;">
+                                <option value="OWNER">Solo mis pacientes</option>
+                                <option value="ALL">Todos los pacientes</option>
+                            </select>
+                        </div>
+
+                        <button type="submit" class="btn-submit" style="background:#e67e22;">
+                            <i class="fas fa-paper-plane"></i> Guardar promocion
+                        </button>
+                    </form>
+
+                    <hr style="margin:20px 0; border:none; border-top:1px solid #eee;">
+                    <h4 style="margin:0 0 10px 0;">Promociones registradas</h4>
+                    <div id="promoStatusContent">Cargando estado...</div>
+                </div>
+
+                <div id="promoPanelInfographics" class="card promo-config-panel" style="display:none; max-width: 960px; margin: 0 auto;">
+                    <div style="display:flex; justify-content:space-between; align-items:center; gap:10px; flex-wrap:wrap; margin-bottom:10px;">
+                        <h3 style="margin:0;"><i class="fas fa-images"></i> Configurar infografias</h3>
+                        <button type="button" class="btn-primary-small" id="btnBackFromInfPanel" style="background:#7f8c8d;">
+                            Volver
+                        </button>
+                    </div>
+
+                    <form id="formInfographicPost">
+                        <input type="hidden" id="infPostId">
+
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label>Titulo</label>
+                                <input type="text" id="infTitle" class="input-field" maxlength="120" placeholder="Ej: Actualizate">
+                            </div>
+                            <div class="form-group">
+                                <label>Visibilidad</label>
+                                <select id="infScope" class="input-field" style="background:white;">
+                                    <option value="OWNER">Solo mis pacientes</option>
+                                    <option value="ALL">Todos los pacientes</option>
+                                </select>
+                            </div>
+                        </div>
+
+                        <div class="form-group">
+                            <label>Mensaje</label>
+                            <textarea id="infMessage" rows="4" class="input-field" placeholder="Texto principal de la infografia"></textarea>
+                        </div>
+
+                        <div class="form-group">
+                            <label>Imagen de fondo</label>
+                            <input type="file" id="infImageFile" class="input-field" accept="image/*">
+                            <input type="hidden" id="infImageUrl">
+                            <small style="color:#777;">La imagen actual se conserva hasta que subas una nueva.</small>
+                        </div>
+
+                        <div id="infImagePreviewWrap" style="display:none; margin:10px 0 16px 0;">
+                            <div style="height:180px; border-radius:12px; background:#eee; background-size:cover; background-position:center;" id="infImagePreview"></div>
+                        </div>
+
+                        <div class="inf-action-grid">
+                            <div class="inf-action-card">
+                                <div class="inf-action-header">
+                                    <div class="vf-switch-copy">
+                                        <strong>Agenda tu cita</strong>
+                                        <small>Activa este boton para llevar al paciente al agendamiento.</small>
+                                    </div>
+                                    <label class="vf-switch" aria-label="Mostrar accion Agenda tu cita">
+                                        <input type="checkbox" id="infShowAgenda">
+                                        <span class="vf-switch-slider"></span>
+                                    </label>
+                                </div>
+                                <div class="inf-action-fields" id="infAgendaConfigRow">
+                                    <div class="form-group">
+                                        <label>Texto del boton</label>
+                                        <input type="text" id="infBtnAgenda" class="input-field" maxlength="40" value="Agenda tu cita">
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="inf-action-card">
+                                <div class="inf-action-header">
+                                    <div class="vf-switch-copy">
+                                        <strong>Contactanos</strong>
+                                        <small>Activa este boton para abrir contacto directo con el medico.</small>
+                                    </div>
+                                    <label class="vf-switch" aria-label="Mostrar accion Contactanos">
+                                        <input type="checkbox" id="infShowContact">
+                                        <span class="vf-switch-slider"></span>
+                                    </label>
+                                </div>
+                                <div class="inf-action-fields" id="infContactConfigRow">
+                                    <div class="form-group">
+                                        <label>Texto del boton</label>
+                                        <input type="text" id="infBtnContact" class="input-field" maxlength="40" value="Contactanos">
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="inf-action-card">
+                                <div class="inf-action-header">
+                                    <div class="vf-switch-copy">
+                                        <strong>Mas informacion</strong>
+                                        <small>Activa este boton para abrir un modal con el contenido completo de la publicacion.</small>
+                                    </div>
+                                    <label class="vf-switch" aria-label="Mostrar accion Mas informacion">
+                                        <input type="checkbox" id="infShowInfo">
+                                        <span class="vf-switch-slider"></span>
+                                    </label>
+                                </div>
+                                <div class="inf-action-fields" id="infInfoConfigRow">
+                                    <div class="form-group">
+                                        <label>Texto del boton</label>
+                                        <input type="text" id="infBtnInfo" class="input-field" maxlength="40" value="Mas informacion">
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="inf-action-card">
+                                <div class="inf-action-header">
+                                    <div class="vf-switch-copy">
+                                        <strong>Ir a fuente</strong>
+                                        <small>Activa este boton para abrir una fuente externa o noticia relacionada.</small>
+                                    </div>
+                                    <label class="vf-switch" aria-label="Mostrar accion Ir a fuente">
+                                        <input type="checkbox" id="infShowSource">
+                                        <span class="vf-switch-slider"></span>
+                                    </label>
+                                </div>
+                                <div class="form-row inf-action-fields" id="infSourceConfigRow">
+                                    <div class="form-group">
+                                        <label>Texto del boton</label>
+                                        <input type="text" id="infBtnSource" class="input-field" maxlength="40" value="Ir a fuente">
+                                    </div>
+                                    <div class="form-group">
+                                        <label>Enlace externo</label>
+                                        <input type="url" id="infSourceUrl" class="input-field" placeholder="https://...">
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="inf-control-footer">
+                            <div class="inf-action-header inf-action-header--footer">
+                                <div class="vf-switch-copy">
+                                    <strong>Publicacion activa</strong>
+                                    <small>Si la apagas, queda guardada pero deja de mostrarse a los pacientes.</small>
+                                </div>
+                                <label class="vf-switch" aria-label="Publicacion activa">
+                                    <input type="checkbox" id="infActive" checked>
+                                    <span class="vf-switch-slider"></span>
+                                </label>
+                            </div>
+                        </div>
+
+                        <div style="display:flex; gap:10px; flex-wrap:wrap; margin-top:16px;">
+                            <button type="submit" class="btn-submit" id="btnSaveInfographicPost" style="max-width:320px;">
+                                <i class="fas fa-save"></i> Guardar publicacion
+                            </button>
+                            <button type="button" class="btn-primary-small" id="btnCancelInfographicEdit" style="background:#7f8c8d; display:none;">
+                                Cancelar edicion
+                            </button>
+                        </div>
+                    </form>
+
+                    <hr style="margin:20px 0; border:none; border-top:1px solid #eee;">
+
+                    <div id="infographicPostsList">
+                        <p style="color:#888;">Cargando publicaciones...</p>
+                    </div>
+                </div>
+            </section>
+            <!-- seccion de servicios -->
+ <section id="view-services" class="view-section" style="display: none;">
+                <h2 class="section-title">Tipos de Servicio</h2>
+
+                <div class="card" style="text-align: center; padding: 40px; margin-bottom: 20px; border: 2px dashed #ccc;">
+                    <i class="fas fa-layer-group" style="font-size: 3rem; color: #b5b3da; margin-bottom: 15px;"></i>
+                    <h3>Gestionar Servicios Médicos</h3>
+                    <p style="color: #666; margin-bottom: 20px;">Crea formularios personalizados o edita los existentes.</p>
+                    
+                    <button onclick="openServiceBuilder()" class="btn-submit" style="background:#8e44ad; max-width: 300px; margin: 0 auto;">
+                        <i class="fas fa-plus-circle"></i> Nuevo Servicio
+                    </button>
+                </div>
+
+                <div class="card">
+                    <h3>Servicios Activos</h3>
+                    <ul id="servicesList" style="list-style: none; padding: 0; margin-top: 15px;">
+                        <li style="padding: 10px; color:#888;">Cargando lista...</li>
+                    </ul>
+                </div>
+            </section>
+
+            <section id="view-agenda" class="view-section" style="display: none;">
+
+                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 20px;">
+                    <h2 class="section-title" style="margin:0;">Agenda de Citas</h2>
+
+                    <div class="date-picker-container"
+                        style="background:white; padding:5px 15px; border-radius:10px; box-shadow:0 2px 5px rgba(0,0,0,0.1);">
+                        <label style="margin-right:10px; font-weight:bold; color:#555;">Ver fecha:</label>
+                        <input type="hidden" id="agendaDateInput">
+                        <button type="button" id="agendaDateTrigger" class="agenda-date-trigger" onclick="openAgendaCalendarModal()">
+                            <i class="fas fa-calendar-alt"></i>
+                            <span id="agendaDateLabel">Seleccionar fecha</span>
+                        </button>
+                    </div>
+                </div>
+
+                <div id="agendaGrid" class="cards-grid">
+                    <p>Cargando citas...</p>
+                </div>
+
+            </section>
+
+        </div>
+    </div>
+
+
+    <div class="modal-overlay" id="modalPatient">
+        <div class="modal-box modal-box-fancy">
+            <div class="modal-header modal-header-fancy">
+                <h3>Nuevo Paciente</h3>
+                <span class="close-modal" onclick="closeModal('modalPatient')">&times;</span>
+            </div>
+            <div class="modal-body">
+                <form id="formNewPatient">
+                    <input type="hidden" name="id_paciente" id="editPatientId">
+
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label>Nombre Completo</label>
+                            <input type="text" name="nombre_completo" id="inpNombre" required
+                                placeholder="Ej: MARIA PEREZ" data-format-hint="Ingresa nombres y apellidos completos.">
+                        </div>
+                        <div class="form-group">
+                            <label>Cédula (Usuario)</label>
+                            <input type="text" name="cedula" id="inpCedula" required placeholder="10 dígitos"
+                                maxlength="10" data-format-hint="Cedula: solo numeros.">
+                            <span class="error-text" id="errorCedula">Debe tener 10 dígitos</span>
+                        </div>
+                    </div>
+
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label>Contraseña</label>
+                            <input type="text" name="password" id="inpPass" value="12345" required data-format-hint="La contrasena se respeta tal como la escribas.">
+                        </div>
+                        <div class="form-group">
+                            <label>F. Nacimiento</label>
+                            <input type="date" name="fecha_nacimiento" id="inpFecha" required>
+                        </div>
+                    </div>
+
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label>Teléfono</label>
+                            <input type="tel" name="telefono" id="inpTel" placeholder="10 dígitos" maxlength="10" data-format-hint="Telefono: solo numeros.">
+                            <span class="error-text" id="errorTel">Debe tener 10 dígitos</span>
+                        </div>
+                        <div class="form-group">
+                            <label>Correo (Opcional)</label>
+                            <input type="email" name="correo" id="inpCorreo" data-format-hint="Se guardara en minusculas.">
+                        </div>
+                    </div>
+
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label>Dirección</label>
+                            <input type="text" name="direccion" id="inpDir" data-format-hint="Se guardara en MAYUSCULAS.">
+                        </div>
+                        <div class="form-group">
+                            <label>Ocupación</label>
+                            <input type="text" name="ocupacion" id="inpOcupacion" data-format-hint="Se guardara en MAYUSCULAS.">
+                        </div>
+                    </div>
+
+                    <div class="patient-form-actions">
+                        <button type="submit" class="btn-submit" id="btnSubmitPatient">Guardar Datos</button>
+                        <button type="button" class="btn-notify-login" id="btnNotifyLogin" onclick="notifyPatientLoginFromModal()" style="display:none;">
+                            <i class="fab fa-whatsapp"></i> Notificar login
+                        </button>
+                    </div>
+
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal-overlay" id="modalDoctorProfileEdit">
+        <div class="modal-box modal-box-fancy" style="max-width:560px;">
+            <div class="modal-header modal-header-fancy">
+                <h3><i class="fas fa-user-edit"></i> Editar perfil medico</h3>
+                <span class="close-modal" onclick="closeModal('modalDoctorProfileEdit')">&times;</span>
+            </div>
+            <div class="modal-body">
+                <form id="formDoctorProfileEdit">
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label>Usuario</label>
+                            <input type="text" id="profileEditUsuario" class="input-field" disabled>
+                        </div>
+                        <div class="form-group">
+                            <label>Nombre</label>
+                            <input type="text" id="profileEditNombre" class="input-field" required data-format-hint="Se guardara en MAYUSCULAS.">
+                        </div>
+                    </div>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label>Correo</label>
+                            <input type="email" id="profileEditCorreo" class="input-field" data-format-hint="Se guardara en minusculas.">
+                        </div>
+                        <div class="form-group">
+                            <label>Telefono</label>
+                            <input type="text" id="profileEditTelefono" class="input-field" maxlength="15" data-format-hint="Solo se permiten numeros.">
+                        </div>
+                    </div>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label>Rol</label>
+                            <input type="text" id="profileEditRol" class="input-field" maxlength="40" data-format-hint="Se guardara en MAYUSCULAS.">
+                        </div>
+                        <div class="form-group">
+                            <label>Registro sanitario</label>
+                            <input type="text" id="profileEditRegistroSanitario" class="input-field" maxlength="60" data-format-hint="Se guardara en MAYUSCULAS.">
+                        </div>
+                    </div>
+                    <div class="form-row">
+                        <div class="form-group" style="justify-content:flex-end; max-width:100%;">
+                            <label style="display:flex; align-items:center; gap:10px; margin-top:24px; color:#36235d;">
+                                <input type="checkbox" id="profileEditUsarFirmaVirtual" checked>
+                                Incluir firma virtual por defecto
+                            </label>
+                            <small style="color:#777; margin-top:6px;">Se usara al final de informes y recetas junto al logo institucional.</small>
+                        </div>
+                    </div>
+                    <button type="submit" class="btn-submit" id="btnSaveDoctorProfile">Guardar cambios</button>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal-overlay" id="modalDoctorVacation">
+        <div class="modal-box modal-box-fancy" style="max-width:640px;">
+            <div class="modal-header modal-header-fancy">
+                <h3><i class="fas fa-umbrella-beach"></i> Aviso de vacaciones</h3>
+                <span class="close-modal" onclick="closeModal('modalDoctorVacation')">&times;</span>
+            </div>
+            <div class="modal-body">
+                <form id="formDoctorVacation">
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label>Hasta que fecha estara fuera</label>
+                            <input type="date" id="vacUntilDate" class="input-field" required>
+                        </div>
+                        <div class="form-group">
+                            <label>Titulo del aviso</label>
+                            <input type="text" id="vacTitle" class="input-field" maxlength="80" placeholder="Ej: Vacaciones del consultorio" required>
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label>Mensaje para pacientes</label>
+                        <textarea id="vacMessage" rows="4" class="input-field" placeholder="Ej: Estare fuera hasta la fecha indicada. Gracias por su comprension." required></textarea>
+                    </div>
+                    <div style="display:flex; gap:10px; flex-wrap:wrap;">
+                        <button type="submit" class="btn-submit" id="btnSaveDoctorVacation">Guardar aviso</button>
+                        <button type="button" class="btn-primary-small" id="btnClearDoctorVacation" style="background:#7f8c8d;">Desactivar aviso</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal-overlay" id="modalSuccess">
+        <div class="modal-box success-box">
+            <div class="success-icon">
+                <i class="fas fa-check"></i>
+            </div>
+            <h3 id="successTitle">¡Excelente!</h3>
+            <p id="successMessage">Cambios guardados correctamente.</p>
+            <button class="btn-primary-small" onclick="closeModal('modalSuccess')"
+                style="margin: 0 auto; margin-top: 15px;">Aceptar</button>
+        </div>
+    </div>
+    <div class="modal-overlay" id="modalReschedule">
+        <div class="modal-box modal-box-fancy" style="max-width: 400px;">
+            <div class="modal-header modal-header-fancy" style="--mh-bg: linear-gradient(135deg, #f39c12, #f5b041);">
+                <h3><i class="fas fa-clock"></i> Reagendar Cita</h3>
+                <span class="close-modal" onclick="closeModal('modalReschedule')">&times;</span>
+            </div>
+            <div class="modal-body">
+                <form id="formReschedule">
+                    <input type="hidden" id="reschIdCita">
+
+                    <p style="margin-bottom:15px; color:#666;">Selecciona el nuevo horario para esta cita:</p>
+
+                    <div class="form-group">
+                        <label>Nueva Fecha</label>
+                        <input type="date" id="reschDate" required>
+                    </div>
+
+                    <div class="form-group">
+                        <label>Nueva Hora</label>
+                        <select id="reschTime" required
+                            style="width:100%; padding:10px; border:1px solid #ddd; border-radius:8px; background:white;">
+                            <option value="">Selecciona fecha primero...</option>
+                        </select>
+                    </div>
+
+                    <button type="submit" class="btn-submit" style="background: #f39c12;">Guardar Cambios</button>
+                </form>
+            </div>
+        </div>
+    </div>
+    <div class="modal-overlay" id="modalEditService">
+        <div class="modal-box modal-box-fancy">
+            <div class="modal-header modal-header-fancy">
+                <h3>Editar Servicio</h3>
+                <span class="close-modal" onclick="closeModal('modalEditService')">&times;</span>
+            </div>
+            <div class="modal-body">
+                <form id="formEditService">
+                    <input type="hidden" id="editServiceId">
+                    <div class="form-group">
+                        <label>Nombre del Servicio</label>
+                        <input type="text" id="editServiceName" required
+                            style="width:100%; padding:10px; border:1px solid #ddd; border-radius:8px;">
+                    </div>
+                    <div class="form-group">
+                        <label>Recomendaciones</label>
+                        <textarea id="editServiceRecs" rows="5"
+                            style="width:100%; padding:10px; border:1px solid #ddd; border-radius:8px;"></textarea>
+                    </div>
+                    <button type="submit" class="btn-submit">Guardar Cambios</button>
+                </form>
+            </div>
+        </div>
+    </div>
+    <div class="modal-overlay" id="modalServiceBuilder">
+        <div class="modal-box modal-box-fancy modal-service-builder" style="max-width: 650px; width: 95%;">
+            <div class="modal-header modal-service-header modal-header-fancy">
+                <h3><i class="fas fa-tools"></i> Configurar Servicio</h3>
+                <button type="button" class="close-modal" onclick="closeModal('modalServiceBuilder')" aria-label="Cerrar">×</button>
+            </div>
+
+            <div class="modal-body" style="max-height: 75vh; overflow-y: auto;">
+                
+                <input type="hidden" id="serviceOriginalName">
+
+                <div class="form-group" id="builderScopeInfoWrap" style="display:none;">
+                    <label style="font-weight:bold;">Disponibilidad del servicio</label>
+                    <input type="text" id="builderScopeInfo" class="doc-input" disabled style="width:100%; padding:10px; border:1px solid #ddd; border-radius:5px; background:#f5f5f5;">
+                    <small style="color:#888;">Este valor se define solo en la creacion y no se puede cambiar en edicion.</small>
+                </div>
+
+                <div class="form-group">
+                    <label style="font-weight:bold;">Nombre del Servicio (Interno/Menu)</label>
+                    <input type="text" id="builderServiceName" class="doc-input" placeholder="Ej: Ecografia Pelvica" style="width:100%; padding:10px; border:1px solid #ddd; border-radius:5px;">
+                    <small style="color:#888;">Este nombre saldra en el menu desplegable.</small>
+                </div>
+
+                <div class="form-group">
+                    <label style="font-weight:bold;">Titulo del Informe (Para el PDF)</label>
+                    <input type="text" id="builderReportTitle" class="doc-input" placeholder="Ej: REPORTE DE ECOGRAFIA..." style="width:100%; padding:10px; border:1px solid #ddd; border-radius:5px;">
+                    <small style="color:#888;">Este titulo se imprimira en la cabecera del PDF.</small>
+                </div>
+
+                <div class="form-group">
+                    <label style="font-weight:bold;">Recomendaciones Automaticas</label>
+                    <textarea id="builderServiceRecs" rows="3" style="width:100%; padding:10px; border:1px solid #ddd; border-radius:5px;" placeholder="Ej: Acudir con vejiga llena..."></textarea>
+                </div>
+
+                <div class="form-group">
+                    <label style="font-weight:bold;">Duracion de la Cita</label>
+                    <select id="builderServiceDuration" class="doc-input" style="width:100%; padding:10px; border:1px solid #ddd; border-radius:5px; background:#fff;">
+                        <option value="30">30 minutos</option>
+                        <option value="60">1 hora</option>
+                        <option value="120">2 horas</option>
+                        <option value="180">3 horas</option>
+                        <option value="240">4 horas</option>
+                        <option value="300">5 horas</option>
+                    </select>
+                    <small style="color:#888;">El tiempo seleccionado bloqueara los espacios siguientes en la agenda.</small>
+                </div>
+
+                <hr style="margin: 20px 0; border:0; border-top:1px solid #eee;">
+
+                <div style="background:#f9f9f9; padding:15px; border-radius:8px; border:1px solid #eee;">
+                    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:15px;">
+                        <h4 style="margin:0; color:#2c3e50;">Campos del Formulario</h4>
+                        <button type="button" onclick="addBuilderFieldRow()" style="background:#27ae60; color:white; border:none; padding:5px 12px; border-radius:4px; cursor:pointer;">
+                            <i class="fas fa-plus"></i> Agregar Campo
+                        </button>
+                    </div>
+
+                    <div id="builderFieldsContainer" style="display:flex; flex-direction:column; gap:8px;">
+                        </div>
+                </div>
+            </div>
+
+                <div class="modal-footer modal-service-footer">
+                    <button type="button" id="btnDeleteServiceFull" class="btn-submit btn-danger" onclick="deleteCurrentService()">
+                        <i class="fas fa-trash"></i> Eliminar
+                    </button>
+                    <button class="btn-submit btn-primary-service" onclick="saveServiceFullConfig()">
+                        <i class="fas fa-save"></i> Guardar Configuracion
+                    </button>
+                </div>
+        </div>
+    </div>
+    <div class="modal-overlay" id="modalServiceScopeChoice">
+        <div class="modal-box modal-box-fancy" style="max-width: 520px;">
+            <div class="modal-header modal-header-fancy">
+                <h3><i class="fas fa-shield-alt"></i> Disponibilidad del servicio</h3>
+                <span class="close-modal" onclick="chooseServiceScope(null)">&times;</span>
+            </div>
+            <div class="modal-body">
+                <p style="margin-top:0; color:#555;">Elige la disponibilidad del servicio para este guardado.</p>
+                <div style="display:flex; flex-direction:column; gap:10px;">
+                    <button type="button" class="btn-submit" style="background:#2c3e50;" onclick="chooseServiceScope('OWNER')">
+                        Guardar solo para mi
+                    </button>
+                    <button type="button" class="btn-submit" style="background:#16a085;" onclick="chooseServiceScope('ALL')">
+                        Guardar para todos
+                    </button>
+                    <button type="button" class="btn-primary-small" style="background:#888;" onclick="chooseServiceScope(null)">
+                        Cancelar
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="modal-overlay" id="modalWeeklyAppointments">
+        <div class="modal-box modal-box-fancy" style="max-width: 900px; width: 94%;">
+            <div class="modal-header modal-header-fancy">
+                <h3><i class="fas fa-calendar-week"></i> Citas de la semana</h3>
+                <span class="close-modal" onclick="closeModal('modalWeeklyAppointments')">&times;</span>
+            </div>
+            <div class="modal-body">
+                <div id="weeklyAppointmentsRange" class="weekly-appointments-range">Cargando...</div>
+                <div id="weeklyAppointmentsList" class="weekly-appointments-list">
+                    <p style="color:#888;">Cargando citas...</p>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="modal-overlay" id="modalAgendaCalendar">
+        <div class="modal-box modal-box-fancy" style="max-width: 760px; width: 94%;">
+            <div class="modal-header modal-header-fancy">
+                <h3><i class="fas fa-calendar-alt"></i> Calendario de agenda</h3>
+                <span class="close-modal" onclick="closeModal('modalAgendaCalendar')">&times;</span>
+            </div>
+            <div class="modal-body">
+                <div class="agenda-calendar-toolbar">
+                    <button type="button" class="btn-primary-small" style="background:#7f8c8d;" onclick="changeAgendaCalendarMonth(-1)">
+                        <i class="fas fa-chevron-left"></i>
+                    </button>
+                    <div id="agendaCalendarTitle" class="agenda-calendar-title">Cargando...</div>
+                    <button type="button" class="btn-primary-small" style="background:#7f8c8d;" onclick="changeAgendaCalendarMonth(1)">
+                        <i class="fas fa-chevron-right"></i>
+                    </button>
+                </div>
+                <div class="agenda-calendar-legend">
+                    <span><i class="fas fa-circle" style="color:#7d5fff;"></i> Dias con citas</span>
+                    <span><i class="fas fa-circle" style="color:#2ecc71;"></i> Hoy</span>
+                    <span><i class="fas fa-circle" style="color:#36235d;"></i> Fecha seleccionada</span>
+                </div>
+                <div id="agendaCalendarGrid" class="agenda-calendar-grid">
+                    <p style="color:#888;">Cargando calendario...</p>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="modal-overlay" id="modalDoctorInfographicPreview">
+        <div class="modal-box modal-box-fancy" style="max-width: 600px; width: 90%;">
+            <div class="modal-header modal-header-fancy">
+                <h3 id="doctorInfographicPreviewTitle">Detalle de publicacion</h3>
+                <span class="close-modal" onclick="closeModal('modalDoctorInfographicPreview')">&times;</span>
+            </div>
+            <div class="modal-body" style="max-height: 70vh; overflow-y: auto; padding: 20px;">
+                <div id="doctorInfographicPreviewContent"></div>
+            </div>
+            <div class="modal-footer" style="padding-top:15px; text-align:right;">
+                <button class="btn-primary-small" onclick="closeModal('modalDoctorInfographicPreview')" style="background:#666;">Cerrar</button>
+            </div>
+        </div>
+    </div>
+    <button type="button" id="btnFloatingCreatePatient" class="admin-fab-create-patient" onclick="openCreateModal()">
+        <i class="fas fa-user-plus"></i>
+        <span>Agregar paciente</span>
+    </button>
+    <script src="js/notify.js"></script>
+    <script src="js/config.js"></script>
+    <script src="js/auth.js"></script>
+    <script src="js/sidebar.js"></script>
+    <script src="js/admin.js"></script>
+    <script src="js/service_builder_v2.js"></script>
+    <script src="js/agenda.js"></script>
+
+    <script>
+        // Verificar sesión
+        const session = sessionStorage.getItem("vidafem_session");
+        if (!session) {
+            window.location.href = "index.html";
+        } else {
+            const data = JSON.parse(session);
+
+            // CORRECCIÓN AQUÍ: Usamos 'nombre_doctor' porque así se llama en tu Excel
+            document.getElementById('adminNameDisplay').textContent = data.data.nombre_doctor || "Doctor";
+        }
+
+    </script>
+</body>
+
+</html>
+
+
