@@ -187,7 +187,7 @@ function saveHistoryChanges(btn, inputs, form) {
     const selectedRadio = form.querySelector('input[name="tipo_ultimo"]:checked');
     dataObj.tipo_ultimo = selectedRadio ? selectedRadio.value : "";
 
-    postHistoryApiJson_({ action: "save_history", data: dataObj, requester: requester })
+    postHistoryApiJson_({ action: "save_history", id_paciente: patientId, data: dataObj, requester: requester })
     .then(res => {
         if (res.success) {
             const msg = res.warning
