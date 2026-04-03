@@ -1059,6 +1059,14 @@ function checkPromoAndDashboard() {
 // ==========================================
 // 2. LISTA DE CITAS
 // ==========================================
+function canPatientDeleteOwnAppointment_(appointment) {
+    const row = appointment || {};
+    const createdBy = String(row.creado_por || "").trim().toLowerCase();
+    const status = String(row.estado || "").trim().toUpperCase();
+    const allowedStatuses = { PENDIENTE: true, REAGENDADO: true };
+    return !!allowedStatuses[status] && (createdBy === "paciente_web" || createdBy === String(currentPatientId || "").trim().toLowerCase());
+}
+
 function loadMyAppointments() {
     const container = document.getElementById('myAppointmentsList');
     if(!container) return;
@@ -1088,6 +1096,13 @@ function loadMyAppointments() {
                             <i class="fas fa-sync-alt"></i> Cambiar Fecha
                         </button>`;
                 }
+                let btnEliminar = "";
+                if (canPatientDeleteOwnAppointment_(cita)) {
+                    btnEliminar = `
+                        <button onclick="deletePatientAppointment('${cita.id_cita}')" style="margin-top:10px; background:white; border:1px solid #c0392b; color:#c0392b; padding:5px 10px; border-radius:5px; cursor:pointer;">
+                            <i class="fas fa-trash-alt"></i> Eliminar
+                        </button>`;
+                }
 
                 card.innerHTML = `
                     <div style="display:flex; justify-content:space-between; align-items:flex-start;">
@@ -1101,12 +1116,37 @@ function loadMyAppointments() {
                             <span style="font-weight:bold; font-size:0.8rem; background:#eee; padding:3px 8px; border-radius:4px;">${cita.estado}</span>
                         </div>
                     </div>
-                    ${btnReagendar}`;
+                    <div style="display:flex; gap:8px; flex-wrap:wrap;">
+                        ${btnReagendar}
+                        ${btnEliminar}
+                    </div>`;
                 container.appendChild(card);
             });
         } else {
             container.innerHTML = `<div class="empty-state"><p>No tienes citas registradas.</p></div>`;
         }
+    });
+}
+
+window.deletePatientAppointment = function(idCita) {
+    const appointmentId = String(idCita || "").trim();
+    if (!appointmentId) return;
+    if (!confirm("Solo puedes eliminar citas que agendaste tu mismo. Esta accion no se puede deshacer.\n\nDeseas continuar?")) {
+        return;
+    }
+
+    postApiWithSession_({ action: "delete_cita", id_cita: appointmentId, requester: currentPatientId })
+    .then(res => {
+        if (res && res.success) {
+            notify("Cita eliminada con exito.", "success");
+            if (res.warning) notify(String(res.warning), "warning");
+            refreshAllData();
+            return;
+        }
+        notify((res && res.message) || "No se pudo eliminar la cita.", "error");
+    })
+    .catch(() => {
+        notify("Error al eliminar cita. Intenta nuevamente.", "error");
     });
 }
 

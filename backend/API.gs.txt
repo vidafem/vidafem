@@ -698,6 +698,16 @@ function doPost(e) {
         const ownerCitaDel = findRow('pacientes', 'id_paciente', pidDel);
         if (!ownerCitaDel) { response = { success: false, message: 'Paciente no encontrado' }; break; }
         if (String(data.requester) !== String(pidDel) && String(ownerCitaDel.creado_por || '') !== String(data.requester)) { response = { success: false, message: 'Acceso denegado' }; break; }
+        if (String(data.requester) === String(pidDel)) {
+          const citaCreadaPor = normalizeTextLower_(citaRowDel.creado_por || '');
+          const citaEstado = String(citaRowDel.estado || '').trim().toUpperCase();
+          const creadaPorPaciente = citaCreadaPor === 'paciente_web' || citaCreadaPor === normalizeTextLower_(pidDel);
+          const estadoPermitido = citaEstado === 'PENDIENTE' || citaEstado === 'REAGENDADO';
+          if (!creadaPorPaciente || !estadoPermitido) {
+            response = { success: false, message: 'Solo puedes eliminar citas que agendaste tu mismo y que sigan pendientes.' };
+            break;
+          }
+        }
         response = deleteAppointment(data.id_cita);
         break;
 
@@ -730,8 +740,20 @@ function doPost(e) {
             bulkCitaInvalidPatient = true;
             break;
           }
+          if (String(data.requester) === String(bulkCitaPatientId)) {
+            const rowCreatedBy = normalizeTextLower_(bulkCitaData[i][9] || '');
+            const rowStatus = String(bulkCitaData[i][5] || '').trim().toUpperCase();
+            const ownCreated = rowCreatedBy === 'paciente_web' || rowCreatedBy === normalizeTextLower_(bulkCitaPatientId);
+            const allowedStatus = rowStatus === 'PENDIENTE' || rowStatus === 'REAGENDADO';
+            if (!ownCreated || !allowedStatus) {
+              response = { success: false, message: 'Solo puedes eliminar citas que agendaste tu mismo y que sigan pendientes.' };
+              bulkCitaInvalidPatient = true;
+              break;
+            }
+          }
           bulkCitaMatches++;
         }
+        if (response && response.success === false) { break; }
         if (bulkCitaInvalidPatient) { response = { success: false, message: 'Una o mas citas no pertenecen a este paciente.' }; break; }
         if (!bulkCitaMatches) { response = { success: false, message: 'No se encontraron citas para eliminar.' }; break; }
         response = deleteAppointmentsBulk(bulkCitaIds);

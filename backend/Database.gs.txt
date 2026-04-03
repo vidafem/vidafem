@@ -1540,6 +1540,7 @@ function buildPatientAppointmentsList_(patientId) {
   if (data.length <= 1) return [];
 
   const idxDuration = headers.indexOf("duracion_minutos");
+  const idxCreatedBy = headers.indexOf("creado_por");
   let result = [];
   for (let i = 1; i < data.length; i++) {
     if (String(data[i][1]) === String(patientId)) {
@@ -1552,6 +1553,7 @@ function buildPatientAppointmentsList_(patientId) {
         // Leemos la nota del paciente (índice 7) y recomendación (índice 8)
         nota: data[i][7], 
         recomendaciones: data[i][8],
+        creado_por: idxCreatedBy > -1 ? String(data[i][idxCreatedBy] || "").trim().toLowerCase() : "",
         duracion_minutos: idxDuration > -1 ? normalizeDurationMinutes_(data[i][idxDuration]) : 30
       });
     }

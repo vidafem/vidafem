@@ -2402,6 +2402,15 @@ async function handleDeleteCita_(body, env) {
   if (!access.ok) {
     return access.result;
   }
+  if (!canPatientDeleteOwnAppointmentForSession_(validation.session, access.appointment)) {
+    return {
+      status: 403,
+      payload: {
+        success: false,
+        message: "Solo puedes eliminar citas que agendaste tu mismo y que sigan pendientes."
+      }
+    };
+  }
 
   const deleteRes = await supabaseRest_(env, "delete", "citas", {
     filters: { id_cita: eq_(appointmentId) }
@@ -2430,7 +2439,7 @@ async function handleDeleteBulkCitas_(body, env) {
   }
 
   const lookupRes = await supabaseRest_(env, "get", "citas", {
-    select: "id_cita,id_paciente",
+    select: "id_cita,id_paciente,creado_por,estado",
     filters: [
       ["id_paciente", eq_(access.patient.id_paciente)],
       ["id_cita", inList_(ids)]
@@ -2464,6 +2473,22 @@ async function handleDeleteBulkCitas_(body, env) {
         message: "Una o mas citas no pertenecen a este paciente."
       }
     };
+  }
+  if (validationSessionIsPaciente_(access.session)) {
+    const denied = matches.find(function(row) {
+      return !canPatientDeleteOwnAppointmentForSession_(access.session, row);
+    });
+    if (denied) {
+      return {
+        status: 403,
+        payload: {
+          success: false,
+          deleted_count: 0,
+          missing_ids: [],
+          message: "Solo puedes eliminar citas que agendaste tu mismo y que sigan pendientes."
+        }
+      };
+    }
   }
 
   const deleteRes = await supabaseRest_(env, "delete", "citas", {
@@ -4468,6 +4493,18 @@ function compareAgendaAppointmentsAsc_(a, b) {
   const dateCmp = normalizeIsoDateValue_(a && a.fecha).localeCompare(normalizeIsoDateValue_(b && b.fecha));
   if (dateCmp !== 0) return dateCmp;
   return normalizeTimeText_(a && a.hora).localeCompare(normalizeTimeText_(b && b.hora));
+}
+
+function validationSessionIsPaciente_(session) {
+  return normalizeLower_(session && session.role) === "paciente";
+}
+
+function canPatientDeleteOwnAppointmentForSession_(session, appointmentRow) {
+  if (!validationSessionIsPaciente_(session)) return true;
+  const createdBy = normalizeLower_(appointmentRow && appointmentRow.creado_por);
+  const status = normalizeAppointmentStatus_(appointmentRow && appointmentRow.estado);
+  const ownCreated = createdBy === "paciente_web" || createdBy === normalizeLower_(session && session.user_id);
+  return ownCreated && (status === "PENDIENTE" || status === "REAGENDADO");
 }
 
 function normalizeAppointmentStatus_(value) {
