@@ -890,7 +890,7 @@ function buildDiagnosisTemplateImagesHtml_(images) {
   if (!blocks) return "";
   return ""
     + "<section style=\"margin-top:2mm;\">"
-    + "<div style=\"font-size:10pt;font-weight:700;color:#36235d;margin:0 0 2mm 0;\">Imagenes clinicas</div>"
+    + "<div style=\"font-size:10pt;font-weight:700;color:#36235d;margin:0 0 2mm 0;\">Evidencia Fotográfica</div>"
     + "<div style=\"display:flex;flex-wrap:wrap;gap:2.4mm;align-items:flex-start;\">"
     + blocks
     + "</div>"
