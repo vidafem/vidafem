@@ -318,6 +318,29 @@
                     </div>
                 </div>
 
+                <button id="btnOpenMedicalCertificate" type="button" class="btn-submit"
+                    style="background:#8e44ad; width:100%; margin-bottom:15px;" onclick="toggleMedicalCertificateModule(true)">
+                    <i class="fas fa-file-medical"></i> AGREGAR CERTIFICADO MEDICO
+                </button>
+
+                <div id="medicalCertificateContainer" class="card mb-3 hidden"
+                    style="border: 1px solid #8e44ad; margin-top: 20px; background: white; border-radius: 5px;">
+                    <div class="card-header"
+                        style="background: #f3ebfb; color: #6f2c91; font-weight: bold; padding: 10px; display:flex; justify-content:space-between; align-items:center;">
+                        <span><i class="fas fa-file-medical"></i> CERTIFICADO MEDICO</span>
+                        <button type="button" onclick="toggleMedicalCertificateModule(false)"
+                            style="color:#c0392b; border:none; background:none; cursor:pointer; font-weight:bold;">
+                            <i class="fas fa-times"></i> Quitar
+                        </button>
+                    </div>
+                    <div style="padding: 15px;">
+                        <div id="medicalCertificateSummary" style="font-size:0.95rem; color:#374151; margin-bottom:12px;">Sin datos de certificado.</div>
+                        <button type="button" class="btn-submit" style="background:#8e44ad; width:auto; padding:8px 15px; font-size:0.9rem;" onclick="openMedicalCertificateModal()">
+                            <i class="fas fa-pen"></i> Completar certificado
+                        </button>
+                    </div>
+                </div>
+
             </div>
 
             <!-- ======================================================= -->
@@ -379,6 +402,77 @@
                     <button type="button" class="btn-primary-small" style="background:#666;" onclick="closeGeneratedDocsManagerModal()">
                         Cerrar
                     </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal-overlay" id="modalMedicalCertificate">
+        <div class="modal-box modal-box-fancy" style="max-width:760px;">
+            <div class="modal-header modal-header-fancy" style="--mh-bg: linear-gradient(135deg, #8e44ad, #6f2c91);">
+                <h3><i class="fas fa-file-medical"></i> Certificado medico</h3>
+                <span class="close-modal" onclick="closeMedicalCertificateModal()">&times;</span>
+            </div>
+            <div class="modal-body" style="max-height:70vh; overflow:auto;">
+                <p id="certDateDisplay" style="margin:0 0 14px; font-weight:600; color:#5b6470;"></p>
+                <div style="display:grid; grid-template-columns:1fr 1fr; gap:12px;">
+                    <div>
+                        <label style="font-weight:700; color:#374151;">Ciudad</label>
+                        <input id="certCiudad" class="doc-input" type="text" value="Guayaquil">
+                    </div>
+                    <div>
+                        <label style="font-weight:700; color:#374151;">C.I / Cedula</label>
+                        <input id="certPacienteCedula" class="doc-input" type="text" readonly>
+                    </div>
+                    <div style="grid-column:1 / -1;">
+                        <label style="font-weight:700; color:#374151;">Nombre del paciente</label>
+                        <input id="certPacienteNombre" class="doc-input" type="text" readonly>
+                    </div>
+                    <div style="grid-column:1 / -1;">
+                        <label style="font-weight:700; color:#374151;">Cuadro clinico</label>
+                        <textarea id="certCuadroClinico" class="doc-input" rows="2" placeholder="Ej: dolor lumbar acompanado de disuria y polaquiuria"></textarea>
+                    </div>
+                    <div style="grid-column:1 / -1;">
+                        <label style="font-weight:700; color:#374151;">Diagnostico</label>
+                        <textarea id="certDiagnostico" class="doc-input" rows="2" placeholder="Ej: Infeccion de vias urinarias, sitio no especificado. CIE 10: N 39.0"></textarea>
+                    </div>
+                    <div>
+                        <label style="font-weight:700; color:#374151;">Lugar donde labora</label>
+                        <input id="certLugarTrabajo" class="doc-input" type="text" placeholder="Ej: CNEL EP">
+                    </div>
+                    <div>
+                        <label style="font-weight:700; color:#374151;">Ocupacion</label>
+                        <input id="certOcupacion" class="doc-input" type="text" placeholder="Ej: TELEOPERADORA">
+                    </div>
+                    <div>
+                        <label style="font-weight:700; color:#374151;">Lugar de atencion</label>
+                        <input id="certLugarAtencion" class="doc-input" type="text" value="Cdla. Garzota II, AV. Agustin Freire Icaza Mz. 152 Villa 13">
+                    </div>
+                    <div>
+                        <label style="font-weight:700; color:#374151;">Establecimiento</label>
+                        <input id="certEstablecimiento" class="doc-input" type="text" value="Consultorio Gineco Obstetrico VIDAFEM">
+                    </div>
+                    <div>
+                        <label style="font-weight:700; color:#374151;">Sugiere guardar reposo</label>
+                        <select id="certReposoSugerido" class="doc-input" onchange="toggleMedicalRestDateInputs_(); updateMedicalCertificateSummary_();">
+                            <option value="NO">NO</option>
+                            <option value="SI">SI</option>
+                        </select>
+                    </div>
+                    <div id="certReposoDates" style="display:none; grid-column:1 / -1; grid-template-columns:1fr 1fr; gap:12px;">
+                        <div>
+                            <label style="font-weight:700; color:#374151;">Inicio reposo</label>
+                            <input id="certReposoInicio" class="doc-input" type="date" onchange="updateMedicalCertificateSummary_();">
+                        </div>
+                        <div>
+                            <label style="font-weight:700; color:#374151;">Fin reposo</label>
+                            <input id="certReposoFin" class="doc-input" type="date" onchange="updateMedicalCertificateSummary_();">
+                        </div>
+                    </div>
+                </div>
+                <div style="margin-top:16px; text-align:right; display:flex; justify-content:flex-end; gap:10px;">
+                    <button type="button" class="btn-primary-small" style="background:#666;" onclick="closeMedicalCertificateModal()">Cancelar</button>
+                    <button type="button" class="btn-primary-small" style="background:#8e44ad;" onclick="saveMedicalCertificateModal()">Guardar certificado</button>
                 </div>
             </div>
         </div>

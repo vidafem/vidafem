@@ -5,9 +5,10 @@ let currentReportId = null;
 let CONFIG_CAMPOS = {};
 let SERVICES_METADATA = [];
 let hasUnsavedChanges = false;
-let currentGeneratedDocs = { report_pdf: "", recipe_pdf: "", external_pdf: "" };
+let currentGeneratedDocs = { report_pdf: "", recipe_pdf: "", certificate_pdf: "", external_pdf: "" };
 let currentExternalPdfItems = [];
 let externalPdfLocalSeq = 0;
+let currentMedicalCertificate = null;
 // Ya no usamos existingFileIds fija, todo se lee del DOM
 
 // VARIABLES EDITOR
@@ -97,6 +98,13 @@ const GENERATED_DIAGNOSIS_DOC_META = {
     color: "#27ae60",
     icon: "fas fa-prescription-bottle-alt",
     deleteTitle: "Borrar solo el PDF de la receta"
+  },
+  certificate_pdf: {
+    label: "PDF certificado",
+    managerLabel: "certificado medico",
+    color: "#8e44ad",
+    icon: "fas fa-file-medical",
+    deleteTitle: "Borrar solo el PDF del certificado medico"
   },
   external_pdf: {
     label: "PDF examen adjunto",
@@ -393,6 +401,253 @@ function getClinicalReportDateForDisplay_(payload) {
   const parsed = new Date(raw);
   return Number.isNaN(parsed.getTime()) ? new Date() : parsed;
 }
+
+function parseDisplayedCedulaFromHeader_() {
+  const cedulaEl = document.getElementById("displayCedula");
+  const raw = cedulaEl ? String(cedulaEl.innerText || cedulaEl.textContent || "").trim() : "";
+  if (!raw) return "";
+  const match = raw.match(/:\s*(.+)$/);
+  return String(match && match[1] ? match[1] : raw).trim();
+}
+
+function formatCertificateShortDate_(value) {
+  const raw = String(value || "").trim();
+  if (!raw) return "";
+  if (/^\d{4}-\d{2}-\d{2}$/.test(raw)) {
+    const p = raw.split("-");
+    return p[2] + "/" + p[1] + "/" + p[0];
+  }
+  const date = new Date(raw);
+  if (Number.isNaN(date.getTime())) return raw;
+  const d = String(date.getDate()).padStart(2, "0");
+  const m = String(date.getMonth() + 1).padStart(2, "0");
+  const y = String(date.getFullYear());
+  return d + "/" + m + "/" + y;
+}
+
+function formatCertificateLongDate_(value) {
+  const date = value instanceof Date ? value : new Date(value || Date.now());
+  if (!date || Number.isNaN(date.getTime())) return "";
+  const weekdays = ["Domingo", "Lunes", "Martes", "Miercoles", "Jueves", "Viernes", "Sabado"];
+  const months = ["enero", "febrero", "marzo", "abril", "mayo", "junio", "julio", "agosto", "septiembre", "octubre", "noviembre", "diciembre"];
+  return weekdays[date.getDay()] + " " + date.getDate() + " de " + months[date.getMonth()] + " de " + date.getFullYear();
+}
+
+function normalizeMedicalCertificateData_(input) {
+  const data = input && typeof input === "object" ? input : {};
+  return {
+    ciudad: String(data.ciudad || "Guayaquil").trim(),
+    nombre_paciente: String(data.nombre_paciente || "").trim(),
+    cedula: String(data.cedula || "").trim(),
+    cuadro_clinico: String(data.cuadro_clinico || "").trim(),
+    diagnostico: String(data.diagnostico || "").trim(),
+    lugar_trabajo: String(data.lugar_trabajo || "").trim(),
+    ocupacion: String(data.ocupacion || "").trim(),
+    lugar_atencion: String(data.lugar_atencion || "Cdla. Garzota II, AV. Agustin Freire Icaza Mz. 152 Villa 13").trim(),
+    establecimiento: String(data.establecimiento || "Consultorio Gineco Obstetrico VIDAFEM").trim(),
+    reposo_sugerido: String(data.reposo_sugerido || "NO").trim().toUpperCase() === "SI" ? "SI" : "NO",
+    reposo_inicio: String(data.reposo_inicio || "").trim(),
+    reposo_fin: String(data.reposo_fin || "").trim()
+  };
+}
+
+function calculateCertificateRestDays_(startDate, endDate) {
+  const start = new Date(String(startDate || "") + "T12:00:00");
+  const end = new Date(String(endDate || "") + "T12:00:00");
+  if (Number.isNaN(start.getTime()) || Number.isNaN(end.getTime())) return 0;
+  const diff = Math.round((end.getTime() - start.getTime()) / 86400000);
+  return diff >= 0 ? (diff + 1) : 0;
+}
+
+function getCertificateRestSummaryText_(data) {
+  const cert = normalizeMedicalCertificateData_(data);
+  if (cert.reposo_sugerido !== "SI") return "";
+  const days = calculateCertificateRestDays_(cert.reposo_inicio, cert.reposo_fin);
+  const startText = formatCertificateShortDate_(cert.reposo_inicio);
+  const endText = formatCertificateShortDate_(cert.reposo_fin);
+  if (!days || !startText || !endText) return "";
+  return "Tiempo de reposo: " + days + " dia(s), desde el " + startText + " hasta el " + endText + ".";
+}
+
+function isMedicalCertificateEnabled_() {
+  const container = document.getElementById("medicalCertificateContainer");
+  return !!(container && !container.classList.contains("hidden"));
+}
+
+function fillMedicalCertificateModalFields_(source) {
+  const cert = normalizeMedicalCertificateData_(source);
+  const reportDate = getClinicalReportDateInputValue_() || formatCertificateShortDate_(new Date());
+  const dateLabel = document.getElementById("certDateDisplay");
+  if (dateLabel) {
+    const longText = formatCertificateLongDate_(getClinicalReportDateForDisplay_({ fecha_reporte: reportDate }));
+    dateLabel.textContent = (cert.ciudad || "Guayaquil") + ", " + longText;
+  }
+  const setValue = (id, value) => {
+    const el = document.getElementById(id);
+    if (el) el.value = String(value || "");
+  };
+  setValue("certCiudad", cert.ciudad || "Guayaquil");
+  setValue("certPacienteNombre", cert.nombre_paciente || document.getElementById("patientNameDisplay").value || "");
+  setValue("certPacienteCedula", cert.cedula || parseDisplayedCedulaFromHeader_());
+  setValue("certCuadroClinico", cert.cuadro_clinico);
+  setValue("certDiagnostico", cert.diagnostico);
+  setValue("certLugarTrabajo", cert.lugar_trabajo);
+  setValue("certOcupacion", cert.ocupacion);
+  setValue("certLugarAtencion", cert.lugar_atencion);
+  setValue("certEstablecimiento", cert.establecimiento);
+  setValue("certReposoSugerido", cert.reposo_sugerido);
+  setValue("certReposoInicio", cert.reposo_inicio);
+  setValue("certReposoFin", cert.reposo_fin);
+  toggleMedicalRestDateInputs_();
+  updateMedicalCertificateSummary_();
+}
+
+function readMedicalCertificateFromModal_() {
+  const getValue = (id) => {
+    const el = document.getElementById(id);
+    return el ? String(el.value || "").trim() : "";
+  };
+  return normalizeMedicalCertificateData_({
+    ciudad: getValue("certCiudad") || "Guayaquil",
+    nombre_paciente: getValue("certPacienteNombre"),
+    cedula: getValue("certPacienteCedula"),
+    cuadro_clinico: getValue("certCuadroClinico"),
+    diagnostico: getValue("certDiagnostico"),
+    lugar_trabajo: getValue("certLugarTrabajo"),
+    ocupacion: getValue("certOcupacion"),
+    lugar_atencion: getValue("certLugarAtencion"),
+    establecimiento: getValue("certEstablecimiento"),
+    reposo_sugerido: getValue("certReposoSugerido") || "NO",
+    reposo_inicio: getValue("certReposoInicio"),
+    reposo_fin: getValue("certReposoFin")
+  });
+}
+
+function validateMedicalCertificateData_(data) {
+  const cert = normalizeMedicalCertificateData_(data);
+  const required = [
+    ["nombre_paciente", "nombre del paciente"],
+    ["cedula", "cedula / C.I."],
+    ["cuadro_clinico", "cuadro clinico"],
+    ["diagnostico", "diagnostico"],
+    ["lugar_trabajo", "lugar donde labora"],
+    ["ocupacion", "ocupacion"],
+    ["lugar_atencion", "lugar de atencion"],
+    ["establecimiento", "establecimiento"]
+  ];
+  for (let i = 0; i < required.length; i++) {
+    const key = required[i][0];
+    if (!String(cert[key] || "").trim()) {
+      return { ok: false, message: "Completa el campo: " + required[i][1] + "." };
+    }
+  }
+  if (cert.reposo_sugerido === "SI") {
+    if (!cert.reposo_inicio || !cert.reposo_fin) {
+      return { ok: false, message: "Debes indicar fecha de inicio y fin del reposo." };
+    }
+    const days = calculateCertificateRestDays_(cert.reposo_inicio, cert.reposo_fin);
+    if (!days) {
+      return { ok: false, message: "La fecha fin del reposo no puede ser menor que la fecha inicio." };
+    }
+  }
+  return { ok: true, data: cert };
+}
+
+function hasMeaningfulMedicalCertificateContent_(payload) {
+  const cert = payload && payload.certificado_medico && typeof payload.certificado_medico === "object"
+    ? payload.certificado_medico
+    : null;
+  if (!cert) return false;
+  const textFields = [
+    cert.cuadro_clinico,
+    cert.diagnostico,
+    cert.lugar_trabajo,
+    cert.ocupacion,
+    cert.lugar_atencion,
+    cert.establecimiento
+  ];
+  return textFields.some((v) => !!String(v || "").trim());
+}
+
+function getMedicalCertificateDataForSave_() {
+  if (!isMedicalCertificateEnabled_()) return null;
+  const cert = normalizeMedicalCertificateData_(currentMedicalCertificate || {});
+  cert.nombre_paciente = cert.nombre_paciente || String(document.getElementById("patientNameDisplay").value || "").trim();
+  cert.cedula = cert.cedula || parseDisplayedCedulaFromHeader_();
+  const valid = validateMedicalCertificateData_(cert);
+  if (!valid.ok) {
+    throw new Error(valid.message);
+  }
+  return valid.data;
+}
+
+function updateMedicalCertificateSummary_() {
+  const summary = document.getElementById("medicalCertificateSummary");
+  if (!summary) return;
+  const cert = normalizeMedicalCertificateData_(readMedicalCertificateFromModal_());
+  const name = cert.nombre_paciente || "Paciente";
+  const rest = cert.reposo_sugerido === "SI" ? (getCertificateRestSummaryText_(cert) || "Reposo pendiente de fechas.") : "Sin reposo.";
+  summary.innerHTML = "<strong>" + escapeHtmlDiagnosis_(name) + "</strong><br><small style=\"color:#666;\">" + escapeHtmlDiagnosis_(rest) + "</small>";
+}
+
+function toggleMedicalRestDateInputs_() {
+  const select = document.getElementById("certReposoSugerido");
+  const box = document.getElementById("certReposoDates");
+  if (!select || !box) return;
+  const show = String(select.value || "NO").trim().toUpperCase() === "SI";
+  box.style.display = show ? "grid" : "none";
+}
+
+window.toggleMedicalCertificateModule = function(show) {
+  const btn = document.getElementById("btnOpenMedicalCertificate");
+  const container = document.getElementById("medicalCertificateContainer");
+  if (!btn || !container) return;
+  if (show) {
+    btn.style.display = "none";
+    container.classList.remove("hidden");
+    if (!currentMedicalCertificate) {
+      currentMedicalCertificate = normalizeMedicalCertificateData_({
+        nombre_paciente: String(document.getElementById("patientNameDisplay").value || "").trim(),
+        cedula: parseDisplayedCedulaFromHeader_(),
+        ciudad: "Guayaquil"
+      });
+    }
+    fillMedicalCertificateModalFields_(currentMedicalCertificate);
+    updateMedicalCertificateSummary_();
+    return;
+  }
+  if (confirm("¿Quitar el certificado medico de este formulario?")) {
+    btn.style.display = "block";
+    container.classList.add("hidden");
+    currentMedicalCertificate = null;
+    updateMedicalCertificateSummary_();
+  }
+};
+
+window.openMedicalCertificateModal = function() {
+  const modal = document.getElementById("modalMedicalCertificate");
+  if (!modal) return;
+  fillMedicalCertificateModalFields_(currentMedicalCertificate || {});
+  modal.classList.add("active");
+};
+
+window.closeMedicalCertificateModal = function() {
+  const modal = document.getElementById("modalMedicalCertificate");
+  if (!modal) return;
+  modal.classList.remove("active");
+};
+
+window.saveMedicalCertificateModal = function() {
+  const cert = readMedicalCertificateFromModal_();
+  const valid = validateMedicalCertificateData_(cert);
+  if (!valid.ok) {
+    alert(valid.message);
+    return;
+  }
+  currentMedicalCertificate = valid.data;
+  updateMedicalCertificateSummary_();
+  closeMedicalCertificateModal();
+};
 
 function getDiagnosisJsPdf_() {
   if (!window.jspdf || !window.jspdf.jsPDF) {
@@ -825,6 +1080,58 @@ function buildDiagnosisTemplateRecipeHtml_(payload) {
       : "")
     + signatureHtml
     + "</article>";
+}
+
+function buildDiagnosisTemplateMedicalCertificateHtml_(payload) {
+  const data = payload || {};
+  const cert = normalizeMedicalCertificateData_(data.certificado_medico || {});
+  const reportDate = getClinicalReportDateForDisplay_(data);
+  const longDate = formatCertificateLongDate_(reportDate);
+  const shortDate = formatCertificateShortDate_(getClinicalReportDateInputValue_() || cert.reposo_inicio || "");
+  const diagnosisLines = diagnosisValueToHtmlLines_(cert.diagnostico);
+  const restSummary = getCertificateRestSummaryText_(cert);
+  const reposoLinea = cert.reposo_sugerido === "SI" ? "SI" : "NO";
+
+  return ""
+    + "<article style=\"font-family:Arial,sans-serif;color:#111;\">"
+    + "<h1 style=\"font-size:14pt; margin:0 0 8mm 0; text-align:center; color:#36235d;\">CERTIFICADO MEDICO</h1>"
+    + "<p style=\"margin:0 0 8mm 0; text-align:right; font-size:10.5pt;\">"
+    + escapeHtmlDiagnosis_(String(cert.ciudad || "Guayaquil") + ", " + longDate)
+    + "</p>"
+    + "<p style=\"font-size:11pt; line-height:1.7; margin:0 0 2.5mm 0; text-align:justify;\">"
+    + "Por medio del presente se certifica que la paciente <strong>" + escapeHtmlDiagnosis_(cert.nombre_paciente) + "</strong> con <strong>C.I " + escapeHtmlDiagnosis_(cert.cedula) + "</strong>. "
+    + "Acudio el dia de hoy a consulta medica en el establecimiento, presentando un cuadro clinico de <strong>" + diagnosisValueToHtmlLines_(cert.cuadro_clinico) + "</strong>, "
+    + "por lo cual fue valorada y atendida conforme a la sintomatologia referida. Con Diagnostico:"
+    + "</p>"
+    + "<div style=\"font-size:11pt; line-height:1.6; margin:0 0 2.5mm 7mm;\">&#8226; " + (diagnosisLines || "--") + "</div>"
+    + "<p style=\"font-size:11pt; line-height:1.7; margin:0 0 2.5mm 0; text-align:justify;\">"
+    + "El presente certificado se otorga a peticion de la persona interesada para ser presentado a su lugar de trabajo <strong>" + escapeHtmlDiagnosis_(cert.lugar_trabajo) + "</strong>. "
+    + "En donde labora como <strong>" + escapeHtmlDiagnosis_(cert.ocupacion) + "</strong>."
+    + "</p>"
+    + "<p style=\"font-size:11pt; line-height:1.7; margin:0 0 2.5mm 0;\">"
+    + "<strong>Lugar de atencion:</strong> " + escapeHtmlDiagnosis_(cert.lugar_atencion)
+    + "<br><strong>Establecimiento:</strong> " + escapeHtmlDiagnosis_(cert.establecimiento)
+    + "</p>"
+    + "<p style=\"font-size:11pt; line-height:1.7; margin:0 0 2.5mm 0;\">"
+    + "<strong>Sugiere guardar reposo:</strong> " + escapeHtmlDiagnosis_(reposoLinea)
+    + (shortDate ? ("<br><strong>El dia:</strong> " + escapeHtmlDiagnosis_(shortDate) + " (" + escapeHtmlDiagnosis_(shortDate) + ")") : "")
+    + (restSummary ? ("<br><strong>" + escapeHtmlDiagnosis_(restSummary) + "</strong>") : "")
+    + "</p>"
+    + "</article>";
+}
+
+async function buildDiagnosisMedicalCertificatePdfDataUrl_(payload) {
+  const data = payload || {};
+  if (!hasMeaningfulMedicalCertificateContent_(data)) return "";
+  try {
+    const htmlTemplatePdf = await buildDiagnosisPdfFromHtmlTemplateDataUrl_(function() {
+      return buildDiagnosisTemplateMedicalCertificateHtml_(data);
+    });
+    if (htmlTemplatePdf) return htmlTemplatePdf;
+  } catch (e) {
+    console.warn("No se pudo renderizar el certificado medico con plantilla HTML.", e);
+  }
+  return "";
 }
 
 async function loadDiagnosisHtmlTemplate_() {
@@ -1554,6 +1861,11 @@ async function buildDiagnosisPdfPayloadsForSave_(payload) {
     if (recipePdf) out.recipe_pdf_data_url = recipePdf;
   }
 
+  if (hasMeaningfulMedicalCertificateContent_(data)) {
+    const certPdf = await buildDiagnosisMedicalCertificatePdfDataUrl_(data);
+    if (certPdf) out.certificate_pdf_data_url = certPdf;
+  }
+
   return out;
 }
 
@@ -1613,6 +1925,7 @@ function applyGalleryLayout(galleryId, size) {
 document.addEventListener("DOMContentLoaded", () => {
   if (!requireDoctorSession()) return;
   loadVirtualSignaturePreference_();
+  updateMedicalCertificateSummary_();
   console.log("🚀 Iniciando Diagnóstico...");
 
   // 1. Obtener IDs de la URL
@@ -1625,6 +1938,15 @@ document.addEventListener("DOMContentLoaded", () => {
   if (fechaInput) {
       const today = new Date();
       fechaInput.value = today.toISOString().split('T')[0];
+      fechaInput.addEventListener("change", function() {
+        fillMedicalCertificateModalFields_(currentMedicalCertificate || {});
+      });
+  }
+
+  const certModal = document.getElementById("modalMedicalCertificate");
+  if (certModal) {
+    certModal.addEventListener("input", updateMedicalCertificateSummary_);
+    certModal.addEventListener("change", updateMedicalCertificateSummary_);
   }
 
   // 2. Cargar Datos del Paciente
@@ -2635,6 +2957,7 @@ async function saveDiagnosis(generarPdf, btn) {
       imagenes: imgs,
       medicamentos: recetaData.medicamentos,
       observaciones_receta: recetaData.observaciones_receta,
+      certificado_medico: getMedicalCertificateDataForSave_(),
       pdf_externos: pdfFiles
     };
   });
@@ -2680,6 +3003,7 @@ function saveRecipe(generarPdf, btn) {
 
     out.medicamentos = universal && Array.isArray(universal.medicamentos) ? universal.medicamentos : [];
     out.observaciones_receta = universal ? String(universal.observaciones_receta || "").trim() : "";
+    out.certificado_medico = getMedicalCertificateDataForSave_();
     out.pdf_externos = pdfFiles;
     return out;
   });
@@ -2699,6 +3023,7 @@ function saveGeneral(generarPdf, btn) {
       out.medicamentos = receta.medicamentos;
       out.observaciones_receta = receta.observaciones_receta;
     }
+    out.certificado_medico = getMedicalCertificateDataForSave_();
     out.pdf_externos = pdfFiles;
     return out;
   });
@@ -2773,9 +3098,10 @@ async function saveCommon(tipo, generarPdf, btnClicked, getDataFn) {
     }
     if (tipo === "TODO") {
       const hasRecipeContent = hasMeaningfulRecipeContent_(specificData);
+      const hasCertificateContent = hasMeaningfulMedicalCertificateContent_(specificData);
       const hasExternalPdf = Array.isArray(specificData.pdf_externos) && specificData.pdf_externos.length > 0;
-      if (!hasRecipeContent && !hasExternalPdf) {
-        throw new Error("Agrega una receta o un PDF adjunto antes de guardar en TODO.");
+      if (!hasRecipeContent && !hasExternalPdf && !hasCertificateContent) {
+        throw new Error("Agrega una receta, certificado medico o un PDF adjunto antes de guardar en TODO.");
       }
     }
     if (tipo === "CONSULTA GENERAL") {
@@ -2823,6 +3149,7 @@ async function saveCommon(tipo, generarPdf, btnClicked, getDataFn) {
       setGeneratedDocsState_({
         pdf_url: res.pdf_url,
         pdf_receta_link: res.pdf_receta_url,
+        pdf_certificado_link: res.pdf_certificado_url,
         pdf_externo_link: res.pdf_externo_url
       });
       hasUnsavedChanges = false;
@@ -2833,23 +3160,26 @@ async function saveCommon(tipo, generarPdf, btnClicked, getDataFn) {
       if (generarPdf && pdfWindow) {
           const primaryPdf = String(res.pdf_url || "").trim();
           const recipePdf = String(res.pdf_receta_url || "").trim();
+          const certificatePdf = String(res.pdf_certificado_url || "").trim();
           const externalPdf = savedExternalPdfItems.length
             ? String(savedExternalPdfItems[0].url || "").trim()
             : String(res.pdf_externo_url || "").trim();
           const hasRecipeContent = hasMeaningfulRecipeContent_(specificData);
+          const hasCertificateContent = hasMeaningfulMedicalCertificateContent_(specificData);
           const hasExternalPdf = savedExternalPdfItems.length > 0;
           let targetPdfUrl = "";
 
           if (tipo === "EXAMENPDF") {
-            targetPdfUrl = externalPdf || recipePdf || primaryPdf;
+            targetPdfUrl = externalPdf || certificatePdf || recipePdf || primaryPdf;
           } else if (tipo === "RECETA") {
-            targetPdfUrl = recipePdf || externalPdf || primaryPdf;
+            targetPdfUrl = recipePdf || certificatePdf || externalPdf || primaryPdf;
           } else if (tipo === "TODO") {
             if (hasRecipeContent && recipePdf) targetPdfUrl = recipePdf;
+            else if (hasCertificateContent && certificatePdf) targetPdfUrl = certificatePdf;
             else if (hasExternalPdf && externalPdf) targetPdfUrl = externalPdf;
-            else targetPdfUrl = recipePdf || externalPdf || primaryPdf;
+            else targetPdfUrl = certificatePdf || recipePdf || externalPdf || primaryPdf;
           } else {
-            targetPdfUrl = primaryPdf || recipePdf || externalPdf;
+            targetPdfUrl = primaryPdf || certificatePdf || recipePdf || externalPdf;
           }
 
           if (targetPdfUrl) {
@@ -2906,6 +3236,7 @@ function normalizeGeneratedDocsState_(docs) {
   return {
     report_pdf: String(input.report_pdf || input.pdf_url || "").trim(),
     recipe_pdf: String(input.recipe_pdf || input.pdf_receta_link || "").trim(),
+    certificate_pdf: String(input.certificate_pdf || input.pdf_certificado_link || "").trim(),
     external_pdf: String(input.external_pdf || input.pdf_externo_link || (externalItems[0] && externalItems[0].url) || "").trim()
   };
 }
@@ -3026,6 +3357,7 @@ function clearDeletedDiagnosisAssetUi_(assetType) {
   const docs = normalizeGeneratedDocsState_(currentGeneratedDocs);
   if (assetType === "report_pdf") docs.report_pdf = "";
   if (assetType === "recipe_pdf") docs.recipe_pdf = "";
+  if (assetType === "certificate_pdf") docs.certificate_pdf = "";
   if (assetType === "external_pdf") {
     docs.external_pdf = "";
     setCurrentExternalPdfItems_([]);
@@ -3253,10 +3585,12 @@ function loadReportForEdit(reportId) {
 
       let data = {};
       try { data = JSON.parse(report.datos_json); } catch (e) { console.error(e); }
+      currentMedicalCertificate = null;
       setCurrentExternalPdfItems_(getStoredExternalPdfItemsFromPayload_(data));
       setGeneratedDocsState_({
         pdf_url: report.pdf_url,
         pdf_receta_link: data.pdf_receta_link,
+        pdf_certificado_link: data.pdf_certificado_link,
         pdf_externo_link: data.pdf_externo_link
       });
 
@@ -3371,6 +3705,12 @@ function loadReportForEdit(reportId) {
       // 6. ARCHIVO ADJUNTO (CORRECCIÓN BORRADO)
       if (getCurrentExternalPdfItems_().length) {
         togglePdfModule(true);
+      }
+      if (data.certificado_medico && typeof data.certificado_medico === "object") {
+        currentMedicalCertificate = normalizeMedicalCertificateData_(data.certificado_medico);
+        if (typeof toggleMedicalCertificateModule === "function") {
+          toggleMedicalCertificateModule(true);
+        }
       }
       console.log("Datos cargados. Activando detector de cambios.");
       setTimeout(() => {
@@ -4027,6 +4367,7 @@ function saveExternalPdfOnly(generarPdf, btn) {
             out.medicamentos = receta.medicamentos;
             out.observaciones_receta = receta.observaciones_receta;
         }
+        out.certificado_medico = getMedicalCertificateDataForSave_();
         out.pdf_externos = pdfFiles;
         return out;
     });
@@ -4041,6 +4382,7 @@ function saveEverything(generarPdf, btn) {
             out.medicamentos = receta.medicamentos;
             out.observaciones_receta = receta.observaciones_receta;
         }
+        out.certificado_medico = getMedicalCertificateDataForSave_();
         out.pdf_externos = pdfFiles;
         return out;
     });
@@ -4126,10 +4468,12 @@ async function saveDynamicService(servicio, generatePdf, btn, recetaData) {
         const pdfFiles = await getExternalPdfPayloadForSave_();
         const hasDynamicContent = hasMeaningfulDynamicDiagnosisContent_(datosDinamicos, imgs);
         const hasRecipeContent = hasMeaningfulRecipeContent_(recetaData);
+        const certData = getMedicalCertificateDataForSave_();
+        const hasCertificateContent = hasMeaningfulMedicalCertificateContent_({ certificado_medico: certData });
         const hasExternalPdf = Array.isArray(pdfFiles) && pdfFiles.length > 0;
 
-        if (!hasDynamicContent && !hasRecipeContent && !hasExternalPdf) {
-            throw new Error("Completa al menos un dato del informe antes de guardar este servicio.");
+        if (!hasDynamicContent && !hasRecipeContent && !hasExternalPdf && !hasCertificateContent) {
+          throw new Error("Completa al menos un dato del informe, certificado, receta o adjunto antes de guardar este servicio.");
         }
 
         const dataObj = {
@@ -4143,6 +4487,7 @@ async function saveDynamicService(servicio, generatePdf, btn, recetaData) {
             datos_json: datosDinamicos, 
             medicamentos: recetaData ? recetaData.medicamentos : [],
             observaciones_receta: recetaData ? recetaData.observaciones_receta : "",
+            certificado_medico: certData,
             imagenes: imgs,
             pdf_externos: pdfFiles
         };
@@ -4174,6 +4519,7 @@ async function saveDynamicService(servicio, generatePdf, btn, recetaData) {
             setGeneratedDocsState_({
                 pdf_url: res.pdf_url,
                 pdf_receta_link: res.pdf_receta_url,
+              pdf_certificado_link: res.pdf_certificado_url,
                 pdf_externo_link: res.pdf_externo_url
             });
             hasUnsavedChanges = false; 
@@ -4184,10 +4530,11 @@ async function saveDynamicService(servicio, generatePdf, btn, recetaData) {
             if(generatePdf && pdfWindow) {
                 const mainPdfUrl = String(res.pdf_url || "").trim();
                 const recipePdfUrl = String(res.pdf_receta_url || "").trim();
+              const certificatePdfUrl = String(res.pdf_certificado_url || "").trim();
                 const externalPdfUrl = savedExternalPdfItems.length
                     ? String(savedExternalPdfItems[0].url || "").trim()
                     : String(res.pdf_externo_url || "").trim();
-                const targetPdfUrl = mainPdfUrl || recipePdfUrl || externalPdfUrl;
+              const targetPdfUrl = mainPdfUrl || certificatePdfUrl || recipePdfUrl || externalPdfUrl;
                 if(targetPdfUrl) {
                     console.log("PDF URL recibida:", targetPdfUrl);
                     pdfWindow.location.href = targetPdfUrl;

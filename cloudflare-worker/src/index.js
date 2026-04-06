@@ -1520,6 +1520,11 @@ async function handleSaveDiagnosisAdvanced_(body, env, url) {
   } else if (normalizeText_(existingPayload.pdf_receta_link)) {
     storedPayload.pdf_receta_link = normalizeText_(existingPayload.pdf_receta_link);
   }
+  if (prepared.certificatePdfUrl) {
+    storedPayload.pdf_certificado_link = normalizeText_(prepared.certificatePdfUrl);
+  } else if (normalizeText_(existingPayload.pdf_certificado_link)) {
+    storedPayload.pdf_certificado_link = normalizeText_(existingPayload.pdf_certificado_link);
+  }
 
   const rowPdfUrl = normalizeText_(prepared.reportPdfUrl || (existing && existing.pdf_url) || "");
 
@@ -1558,6 +1563,7 @@ async function handleSaveDiagnosisAdvanced_(body, env, url) {
       id_reporte: idReporte,
       pdf_url: rowPdfUrl,
       pdf_receta_url: normalizeText_(storedPayload.pdf_receta_link),
+      pdf_certificado_url: normalizeText_(storedPayload.pdf_certificado_link),
       pdf_externo_url: normalizeText_(storedPayload.pdf_externo_link),
       pdf_externos: Array.isArray(storedPayload.pdf_externos) ? storedPayload.pdf_externos : [],
       storage_info: {
@@ -1631,6 +1637,7 @@ async function handleDeleteDiagnosisAsset_(body, env) {
   const allowed = {
     report_pdf: true,
     recipe_pdf: true,
+    certificate_pdf: true,
     external_pdf: true
   };
   if (!reportId) {
@@ -1672,6 +1679,15 @@ async function handleDeleteDiagnosisAsset_(body, env) {
       removedAssetUrl = recipeUrl;
       requiresProxy = isDriveManagedUrlWorker_(recipeUrl);
       delete payload.pdf_receta_link;
+    }
+  } else if (assetType === "certificate_pdf") {
+    const certUrl = normalizeText_(payload.pdf_certificado_link);
+    if (!certUrl) {
+      localErrorMessage = "Ese documento ya no existe o no fue generado.";
+    } else {
+      removedAssetUrl = certUrl;
+      requiresProxy = isDriveManagedUrlWorker_(certUrl);
+      delete payload.pdf_certificado_link;
     }
   } else if (assetType === "external_pdf") {
     const assetId = normalizeText_(body.asset_id || body.id_asset || body.file_id || body.url);
@@ -5062,8 +5078,10 @@ async function prepareDiagnosisPersistenceWorker_(env, payload, options) {
   const out = Object.assign({}, src);
   let reportPdfUrl = "";
   let recipePdfUrl = "";
+  let certificatePdfUrl = "";
   let reportPdfKey = "";
   let recipePdfKey = "";
+  let certificatePdfKey = "";
 
   if (Object.prototype.hasOwnProperty.call(src, "imagenes")) {
     const images = [];
@@ -5203,16 +5221,39 @@ async function prepareDiagnosisPersistenceWorker_(env, payload, options) {
     recipePdfKey = upload.key || "";
   }
 
+  const certificatePdfDataUrl = normalizeText_(src.certificate_pdf_data_url);
+  if (certificatePdfDataUrl) {
+    const upload = await uploadDataUrlToWorkerStorage_(
+      env,
+      requestUrl,
+      joinStorageObjectKey_([
+        patientId,
+        reportId,
+        "reportes",
+        "certificado_medico_" + Date.now() + "_" + randomHex_(4)
+      ]),
+      certificatePdfDataUrl
+    );
+    if (!upload.success) {
+      return { success: false, status: 500, message: upload.message || "No se pudo guardar el PDF de certificado medico." };
+    }
+    certificatePdfUrl = upload.url;
+    certificatePdfKey = upload.key || "";
+  }
+
   delete out.report_pdf_data_url;
   delete out.recipe_pdf_data_url;
+  delete out.certificate_pdf_data_url;
 
   return {
     success: true,
     data: out,
     reportPdfUrl: reportPdfUrl,
     recipePdfUrl: recipePdfUrl,
+    certificatePdfUrl: certificatePdfUrl,
     reportPdfKey: reportPdfKey,
-    recipePdfKey: recipePdfKey
+    recipePdfKey: recipePdfKey,
+    certificatePdfKey: certificatePdfKey
   };
 }
 
@@ -5274,6 +5315,7 @@ function diagnosisRecordRequiresAppsScriptCleanup_(report) {
   const payload = parseStoredDiagnosisJson_(row.datos_json);
   if (isDriveManagedUrlWorker_(row.pdf_url || row.pdf_link)) return true;
   if (isDriveManagedUrlWorker_(payload.pdf_receta_link)) return true;
+  if (isDriveManagedUrlWorker_(payload.pdf_certificado_link)) return true;
   if (normalizeText_(payload.report_folder_id)) return true;
   if (Array.isArray(payload.drive_file_ids) && payload.drive_file_ids.some(function(item) { return !!normalizeText_(item); })) {
     return true;
@@ -5301,6 +5343,7 @@ function collectDiagnosisAssetUrlsWorker_(pdfUrl, payload) {
 
   add(pdfUrl);
   add(data.pdf_receta_link);
+  add(data.pdf_certificado_link);
 
   const images = Array.isArray(data.imagenes) ? data.imagenes : [];
   for (let i = 0; i < images.length; i++) {
@@ -5329,6 +5372,7 @@ function buildDiagnosisRemainingDocsWorker_(pdfUrl, payload) {
   return {
     pdf_url: normalizeText_(pdfUrl),
     pdf_receta_link: normalizeText_(data.pdf_receta_link),
+    pdf_certificado_link: normalizeText_(data.pdf_certificado_link),
     pdf_externo_link: externalLink,
     pdf_externos: externalItems
   };
@@ -5395,6 +5439,7 @@ function buildDiagnosisStoragePayload_(payload, options) {
   if (Array.isArray(oldPayload.drive_file_ids)) out.drive_file_ids = oldPayload.drive_file_ids.slice();
   if (normalizeText_(oldPayload.report_folder_id)) out.report_folder_id = normalizeText_(oldPayload.report_folder_id);
   if (normalizeText_(oldPayload.pdf_receta_link)) out.pdf_receta_link = normalizeText_(oldPayload.pdf_receta_link);
+  if (normalizeText_(oldPayload.pdf_certificado_link)) out.pdf_certificado_link = normalizeText_(oldPayload.pdf_certificado_link);
 
   return out;
 }
@@ -5529,6 +5574,7 @@ function reportContainsFileIdWorker_(report, fileId) {
 
   const payload = parseStoredDiagnosisJson_(row.datos_json);
   if (extractDriveFileIdFromUrlWorker_(payload.pdf_receta_link) === target) return true;
+  if (extractDriveFileIdFromUrlWorker_(payload.pdf_certificado_link) === target) return true;
   if (extractDriveFileIdFromUrlWorker_(payload.pdf_externo_link) === target) return true;
 
   const list = Array.isArray(payload.drive_file_ids) ? payload.drive_file_ids : [];

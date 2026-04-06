@@ -97,6 +97,13 @@ const DIAGNOSIS_ASSET_META = {
         icon: "fas fa-prescription-bottle-alt",
         deleteTitle: "Borrar solo el PDF de la receta"
     },
+    certificate_pdf: {
+        label: "certificado medico",
+        buttonLabel: "Certificado",
+        color: "#8e44ad",
+        icon: "fas fa-file-medical",
+        deleteTitle: "Borrar solo el PDF del certificado medico"
+    },
     external_pdf: {
         label: "examen adjunto",
         buttonLabel: "Examen Adjunto",
@@ -1412,6 +1419,7 @@ function loadDiagnosisHistory() {
                 const docLinks = {
                     report_pdf: String(rep.pdf_url || "").trim(),
                     recipe_pdf: String(extraData.pdf_receta_link || "").trim(),
+                    certificate_pdf: String(extraData.pdf_certificado_link || "").trim(),
                     external_pdfs: normalizeDiagnosisExternalPdfItemsClinical_(extraData)
                 };
 
@@ -1423,6 +1431,10 @@ function loadDiagnosisHistory() {
                 // B. VER RECETA (Si existe link guardado)
                 if (docLinks.recipe_pdf) {
                     botonesHtml += buildDiagnosisAssetViewHtml_("recipe_pdf", docLinks.recipe_pdf);
+                }
+
+                if (docLinks.certificate_pdf) {
+                    botonesHtml += buildDiagnosisAssetViewHtml_("certificate_pdf", docLinks.certificate_pdf);
                 }
 
                 // C. VER EXAMEN SUBIDO (Si existe link guardado)
@@ -1506,6 +1518,7 @@ function normalizeDiagnosisAssetModalState_(state) {
         id_reporte: String(src.id_reporte || "").trim(),
         report_pdf: String(src.report_pdf || src.pdf_url || "").trim(),
         recipe_pdf: String(src.recipe_pdf || src.pdf_receta_link || "").trim(),
+        certificate_pdf: String(src.certificate_pdf || src.pdf_certificado_link || "").trim(),
         external_pdfs: normalizeDiagnosisExternalPdfItemsClinical_(src)
     };
 }
@@ -1540,7 +1553,7 @@ function renderDiagnosisAssetManagerModal_() {
     const state = normalizeDiagnosisAssetModalState_(currentDiagnosisAssetModalState);
     let html = "";
 
-    ["report_pdf", "recipe_pdf"].forEach((key) => {
+    ["report_pdf", "recipe_pdf", "certificate_pdf"].forEach((key) => {
         if (!state[key]) return;
         const meta = DIAGNOSIS_ASSET_META[key];
         html += buildDiagnosisAssetManagerActionButton_({
@@ -1561,7 +1574,7 @@ function renderDiagnosisAssetManagerModal_() {
         });
     });
 
-    if (!state.report_pdf && !state.recipe_pdf && !state.external_pdfs.length) {
+    if (!state.report_pdf && !state.recipe_pdf && !state.certificate_pdf && !state.external_pdfs.length) {
         html += `
             <div style="padding:14px 16px; border:1px dashed #d0d7e2; border-radius:14px; background:#fafcff; color:#5f6b7a;">
                 Este diagnóstico ya no tiene PDFs individuales para borrar por separado.
