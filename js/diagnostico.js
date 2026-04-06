@@ -571,7 +571,11 @@ function hasMeaningfulMedicalCertificateContent_(payload) {
 
 function getMedicalCertificateDataForSave_() {
   if (!isMedicalCertificateEnabled_()) return null;
-  const cert = normalizeMedicalCertificateData_(currentMedicalCertificate || {});
+  const modal = document.getElementById("modalMedicalCertificate");
+  const modalDraft = readMedicalCertificateFromModal_();
+  const hasModalDraft = hasMeaningfulMedicalCertificateContent_({ certificado_medico: modalDraft });
+  const shouldUseModalDraft = !!(modal && (modal.classList.contains("active") || hasModalDraft));
+  const cert = normalizeMedicalCertificateData_(shouldUseModalDraft ? modalDraft : (currentMedicalCertificate || {}));
   cert.nombre_paciente = cert.nombre_paciente || String(document.getElementById("patientNameDisplay").value || "").trim();
   cert.cedula = cert.cedula || parseDisplayedCedulaFromHeader_();
   const valid = validateMedicalCertificateData_(cert);
@@ -634,6 +638,8 @@ window.openMedicalCertificateModal = function() {
 window.closeMedicalCertificateModal = function() {
   const modal = document.getElementById("modalMedicalCertificate");
   if (!modal) return;
+  // Si se cierra sin guardar, restauramos los datos persistidos para descartar borradores.
+  fillMedicalCertificateModalFields_(currentMedicalCertificate || {});
   modal.classList.remove("active");
 };
 
@@ -1131,7 +1137,77 @@ async function buildDiagnosisMedicalCertificatePdfDataUrl_(payload) {
   } catch (e) {
     console.warn("No se pudo renderizar el certificado medico con plantilla HTML.", e);
   }
-  return "";
+
+  // Fallback: generar PDF clasico para evitar quedarnos sin certificado
+  const cert = normalizeMedicalCertificateData_(data.certificado_medico || {});
+  const jsPDF = getDiagnosisJsPdf_();
+  const doc = new jsPDF({ unit: "mm", format: "a4" });
+  const reportDate = getClinicalReportDateForDisplay_(data);
+  const longDate = formatCertificateLongDate_(reportDate);
+  const shortDate = formatCertificateShortDate_(getClinicalReportDateInputValue_() || cert.reposo_inicio || "");
+  const restSummary = getCertificateRestSummaryText_(cert);
+  const reposoLinea = cert.reposo_sugerido === "SI" ? "SI" : "NO";
+  let y = 18;
+
+  doc.setFont("helvetica", "bold");
+  doc.setFontSize(16);
+  doc.text("CERTIFICADO MEDICO", 105, y, { align: "center" });
+  y += 10;
+
+  doc.setFont("helvetica", "normal");
+  doc.setFontSize(10);
+  doc.text(String((cert.ciudad || "Guayaquil") + ", " + (longDate || "")).trim(), 195, y, { align: "right" });
+  y += 10;
+
+  const writeParagraph = (text) => {
+    const lines = doc.splitTextToSize(String(text || "").trim(), 178);
+    y = ensureDiagnosisPdfSpace_(doc, y, Math.max(8, (lines.length * 5) + 2));
+    doc.text(lines, 16, y);
+    y += Math.max(8, lines.length * 5 + 2);
+  };
+
+  writeParagraph(
+    "Por medio del presente se certifica que la paciente "
+    + cert.nombre_paciente
+    + " con C.I " + cert.cedula
+    + ". Acudio el dia de hoy a consulta medica en el establecimiento, presentando un cuadro clinico de "
+    + cert.cuadro_clinico
+    + ", por lo cual fue valorada y atendida conforme a la sintomatologia referida."
+  );
+
+  writeParagraph("Diagnostico: " + cert.diagnostico);
+
+  writeParagraph(
+    "El presente certificado se otorga a peticion de la persona interesada para ser presentado a su lugar de trabajo "
+    + cert.lugar_trabajo
+    + ". En donde labora como " + cert.ocupacion + "."
+  );
+
+  writeParagraph("Lugar de atencion: " + cert.lugar_atencion);
+  writeParagraph("Establecimiento: " + cert.establecimiento);
+  writeParagraph("Sugiere guardar reposo: " + reposoLinea);
+
+  if (shortDate) {
+    writeParagraph("El dia: " + shortDate + " (" + shortDate + ")");
+  }
+  if (restSummary) {
+    writeParagraph(restSummary);
+  }
+
+  if (data.incluir_firma_virtual) {
+    const doctorName = getDiagnosisDoctorDisplayName_();
+    if (doctorName) {
+      y += 14;
+      y = ensureDiagnosisPdfSpace_(doc, y, 20);
+      doc.setDrawColor(190, 190, 190);
+      doc.line(120, y + 8, 190, y + 8);
+      doc.setFont("helvetica", "bold");
+      doc.setFontSize(10);
+      doc.text(doctorName, 155, y + 14, { align: "center" });
+    }
+  }
+
+  return doc.output("datauristring");
 }
 
 async function loadDiagnosisHtmlTemplate_() {
@@ -2988,11 +3064,13 @@ function saveRecipe(generarPdf, btn) {
 
   saveCommon("RECETA", generarPdf, btn, async () => {
     const legacy = readLegacyRecipeData_();
+    const certData = getMedicalCertificateDataForSave_();
     const pdfFiles = await getExternalPdfPayloadForSave_();
     const out = {};
     if (legacy.hasData) {
       out.medicamentos = legacy.medicamentos;
       out.observaciones_receta = legacy.observaciones_receta;
+      out.certificado_medico = certData;
       out.pdf_externos = pdfFiles;
       return out;
     }
@@ -3003,7 +3081,7 @@ function saveRecipe(generarPdf, btn) {
 
     out.medicamentos = universal && Array.isArray(universal.medicamentos) ? universal.medicamentos : [];
     out.observaciones_receta = universal ? String(universal.observaciones_receta || "").trim() : "";
-    out.certificado_medico = getMedicalCertificateDataForSave_();
+    out.certificado_medico = certData;
     out.pdf_externos = pdfFiles;
     return out;
   });
@@ -3086,8 +3164,10 @@ async function saveCommon(tipo, generarPdf, btnClicked, getDataFn) {
     if (tipo === "RECETA") {
       const meds = Array.isArray(specificData.medicamentos) ? specificData.medicamentos : [];
       const validMeds = meds.filter((m) => String(m && m.nombre || "").trim());
-      if (validMeds.length === 0) {
-        throw new Error("Agrega al menos un medicamento antes de guardar la receta.");
+      const hasCertificateContent = hasMeaningfulMedicalCertificateContent_(specificData);
+      const hasExternalPdf = Array.isArray(specificData.pdf_externos) && specificData.pdf_externos.length > 0;
+      if (validMeds.length === 0 && !hasCertificateContent && !hasExternalPdf) {
+        throw new Error("Agrega al menos un medicamento, un certificado medico o un PDF adjunto antes de guardar en RECETA.");
       }
     }
     if (tipo === "EXAMENPDF") {
