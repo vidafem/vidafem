@@ -1169,11 +1169,12 @@ function buildDiagnosisTemplateMedicalCertificateHtml_(payload) {
   const diagnosisLines = diagnosisValueToHtmlLines_(cert.diagnostico);
   const restSummary = getCertificateRestSummaryText_(cert);
   const reposoLinea = cert.reposo_sugerido === "SI" ? "SI" : "NO";
+  const signatureHtml = buildDiagnosisTemplateSignatureHtml_(data);
 
   return ""
     + "<article style=\"font-family:Arial,sans-serif;color:#111;\">"
-    + "<h1 style=\"font-size:22pt; margin:0 0 8mm 0; text-align:center; color:#000; letter-spacing:0.5px;\">CERTIFICADO MÉDICO</h1>"
-    + "<p style=\"margin:0 0 8mm 0; text-align:right; font-size:10.5pt;\">"
+    + "<h1 style=\"font-size:26pt; margin:0 0 12mm 0; text-align:center; color:#000; letter-spacing:0.5px;\">CERTIFICADO MÉDICO</h1>"
+    + "<p style=\"margin:0 0 14mm 0; text-align:right; font-size:10.5pt;\">"
     + escapeHtmlDiagnosis_(String(cert.ciudad || "Guayaquil") + ", " + longDate)
     + "</p>"
     + "<p style=\"font-size:11pt; line-height:1.7; margin:0 0 2.5mm 0; text-align:justify;\">"
@@ -1183,17 +1184,13 @@ function buildDiagnosisTemplateMedicalCertificateHtml_(payload) {
     + "</p>"
     + "<div style=\"font-size:11pt; line-height:1.6; margin:0 0 2.5mm 7mm;\">&#8226; " + (diagnosisLines || "--") + "</div>"
     + "<p style=\"font-size:11pt; line-height:1.7; margin:0 0 2.5mm 0; text-align:justify;\">"
-    + "El presente certificado se otorga a petición de la persona interesada para ser presentado en su lugar de trabajo <strong>" + escapeHtmlDiagnosis_(cert.lugar_trabajo) + "</strong>, "
-    + "donde labora como <strong>" + escapeHtmlDiagnosis_(cert.ocupacion) + "</strong>."
-    + "</p>"
-    + "<p style=\"font-size:11pt; line-height:1.7; margin:0 0 2.5mm 0;\">"
-    + "<strong>Lugar de atención:</strong> " + escapeHtmlDiagnosis_(cert.lugar_atencion)
-    + "<br><strong>Establecimiento:</strong> " + escapeHtmlDiagnosis_(cert.establecimiento)
+    + "El presente certificado se otorga a petición de la persona interesada para los fines que crea conveniente."
     + "</p>"
     + "<p style=\"font-size:11pt; line-height:1.7; margin:0 0 2.5mm 0;\">"
     + "<strong>Reposo médico:</strong> " + escapeHtmlDiagnosis_(reposoLinea)
     + (restSummary ? ("<br><strong>" + escapeHtmlDiagnosis_(restSummary) + "</strong>") : "")
     + "</p>"
+    + signatureHtml
     + "</article>";
 }
 
@@ -1220,14 +1217,14 @@ async function buildDiagnosisMedicalCertificatePdfDataUrl_(payload) {
   let y = 18;
 
   doc.setFont("helvetica", "bold");
-  doc.setFontSize(24);
+  doc.setFontSize(28);
   doc.text("CERTIFICADO MÉDICO", 105, y, { align: "center" });
-  y += 10;
+  y += 14;
 
   doc.setFont("helvetica", "normal");
   doc.setFontSize(10);
   doc.text(String((cert.ciudad || "Guayaquil") + ", " + (longDate || "")).trim(), 195, y, { align: "right" });
-  y += 10;
+  y += 14;
 
   const writeParagraph = (text) => {
     const lines = doc.splitTextToSize(String(text || "").trim(), 178);
@@ -1248,13 +1245,9 @@ async function buildDiagnosisMedicalCertificatePdfDataUrl_(payload) {
   writeParagraph("Diagnóstico: " + cert.diagnostico);
 
   writeParagraph(
-    "El presente certificado se otorga a petición de la persona interesada para ser presentado en su lugar de trabajo "
-    + cert.lugar_trabajo
-    + ", donde labora como " + cert.ocupacion + "."
+    "El presente certificado se otorga a petición de la persona interesada para los fines que crea conveniente."
   );
 
-  writeParagraph("Lugar de atención: " + cert.lugar_atencion);
-  writeParagraph("Establecimiento: " + cert.establecimiento);
   writeParagraph("Reposo médico: " + reposoLinea);
   if (restSummary) {
     writeParagraph(restSummary);
