@@ -3254,9 +3254,11 @@ async function saveCommon(tipo, generarPdf, btnClicked, getDataFn) {
       ...specificData,
     };
 
+    let generatedPdfPayload = null;
+
     if (generarPdf) {
       btnClicked.innerHTML = `<i class="fas fa-circle-notch fa-spin-fast"></i> Armando PDF...`;
-      const generatedPdfPayload = await buildDiagnosisPdfPayloadsForSave_(data);
+      generatedPdfPayload = await buildDiagnosisPdfPayloadsForSave_(data);
       Object.assign(data, generatedPdfPayload);
       btnClicked.innerHTML = `<i class="fas fa-circle-notch fa-spin-fast"></i> Subiendo...`;
     }
@@ -3315,8 +3317,33 @@ async function saveCommon(tipo, generarPdf, btnClicked, getDataFn) {
           if (targetPdfUrl) {
               pdfWindow.location.href = targetPdfUrl;
           } else {
-              pdfWindow.close(); // Si no hay link, cerramos la ventana blanca
-              alert("Guardado, pero el servidor no devolvió el PDF.");
+              const localReportPdf = String(generatedPdfPayload && generatedPdfPayload.report_pdf_data_url || "").trim();
+              const localRecipePdf = String(generatedPdfPayload && generatedPdfPayload.recipe_pdf_data_url || "").trim();
+              const localCertificatePdf = String(generatedPdfPayload && generatedPdfPayload.certificate_pdf_data_url || "").trim();
+              let localTargetPdf = "";
+              if (tipo === "EXAMENPDF") {
+                localTargetPdf = localCertificatePdf || localRecipePdf || localReportPdf;
+              } else if (tipo === "CERTIFICADO MEDICO") {
+                localTargetPdf = localCertificatePdf || localRecipePdf || localReportPdf;
+              } else if (tipo === "RECETA") {
+                localTargetPdf = localRecipePdf || localCertificatePdf || localReportPdf;
+              } else if (tipo === "TODO") {
+                if (hasRecipeContent && localRecipePdf) localTargetPdf = localRecipePdf;
+                else if (hasCertificateContent && localCertificatePdf) localTargetPdf = localCertificatePdf;
+                else localTargetPdf = localCertificatePdf || localRecipePdf || localReportPdf;
+              } else {
+                localTargetPdf = localReportPdf || localCertificatePdf || localRecipePdf;
+              }
+
+              if (localTargetPdf) {
+                pdfWindow.location.href = localTargetPdf;
+                if (window.showToast) {
+                  window.showToast("Guardado correcto. Se abrio el PDF local porque el servidor no devolvio enlace.", "warning");
+                }
+              } else {
+                pdfWindow.close();
+                alert("Guardado, pero no se pudo obtener ninguna URL de PDF (ni remota ni local).");
+              }
           }
           setTimeout(() => window.navigateWithEnv(`clinical.html?id=${currentPatientId}&tab=diagnostico`), 1500);
       } else {
@@ -4608,6 +4635,7 @@ async function saveDynamicService(servicio, generatePdf, btn, recetaData) {
     const originalText = btn.innerHTML;
     btn.disabled = true; 
     btn.innerHTML = '<i class="fas fa-circle-notch fa-spin"></i> Guardando...';
+    let generatedPdfPayload = null;
     
     try {
         // 1. Recolectar datos del formulario dinámico
@@ -4681,7 +4709,7 @@ async function saveDynamicService(servicio, generatePdf, btn, recetaData) {
 
         if (generatePdf) {
             btn.innerHTML = '<i class="fas fa-circle-notch fa-spin"></i> Armando PDF...';
-            const generatedPdfPayload = await buildDiagnosisPdfPayloadsForSave_(dataObj);
+          generatedPdfPayload = await buildDiagnosisPdfPayloadsForSave_(dataObj);
             Object.assign(dataObj, generatedPdfPayload);
             btn.innerHTML = '<i class="fas fa-circle-notch fa-spin"></i> Subiendo...';
         }
@@ -4727,9 +4755,19 @@ async function saveDynamicService(servicio, generatePdf, btn, recetaData) {
                     pdfWindow.location.href = targetPdfUrl;
                     setTimeout(() => window.navigateWithEnv(`clinical.html?id=${currentPatientId}&tab=diagnostico`), 2000);
                 } else {
+                  const localReportPdf = String(generatedPdfPayload && generatedPdfPayload.report_pdf_data_url || "").trim();
+                  const localRecipePdf = String(generatedPdfPayload && generatedPdfPayload.recipe_pdf_data_url || "").trim();
+                  const localCertificatePdf = String(generatedPdfPayload && generatedPdfPayload.certificate_pdf_data_url || "").trim();
+                  const localTargetPdf = localReportPdf || localCertificatePdf || localRecipePdf;
+                  if (localTargetPdf) {
+                    pdfWindow.location.href = localTargetPdf;
+                    alert("⚠️ Aviso: Se guardo y se abrio PDF local porque el servidor no devolvio enlace.");
+                    setTimeout(() => window.navigateWithEnv(`clinical.html?id=${currentPatientId}&tab=diagnostico`), 2000);
+                  } else {
                     pdfWindow.close();
-                    alert("⚠️ Aviso: Se guardaron los datos pero el servidor no devolvió el enlace del PDF.");
+                    alert("⚠️ Aviso: Se guardaron los datos pero no se pudo obtener PDF remoto ni local.");
                     window.navigateWithEnv(`clinical.html?id=${currentPatientId}&tab=diagnostico`);
+                  }
                 }
             } else {
                 // SOLO GUARDAR
