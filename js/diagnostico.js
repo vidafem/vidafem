@@ -1292,6 +1292,32 @@ async function waitForDiagnosisTemplateImages_(root) {
   })));
 }
 
+function withDiagnosisTimeout_(promise, timeoutMs, timeoutMessage) {
+  const ms = Math.max(1000, Number(timeoutMs || 0));
+  return new Promise((resolve, reject) => {
+    let settled = false;
+    const timer = setTimeout(() => {
+      if (settled) return;
+      settled = true;
+      reject(new Error(String(timeoutMessage || "La operación tardó demasiado.")));
+    }, ms);
+
+    Promise.resolve(promise)
+      .then((value) => {
+        if (settled) return;
+        settled = true;
+        clearTimeout(timer);
+        resolve(value);
+      })
+      .catch((error) => {
+        if (settled) return;
+        settled = true;
+        clearTimeout(timer);
+        reject(error);
+      });
+  });
+}
+
 function isDiagnosisCanvasSliceMostlyBlank_(canvas, startY, sliceHeight) {
   if (!canvas || sliceHeight <= 0 || sliceHeight > 96) return false;
   const ctx = canvas.getContext("2d", { willReadFrequently: true });
@@ -1492,13 +1518,17 @@ async function buildDiagnosisPdfFromHtmlTemplateDataUrl_(innerHtmlBuilder) {
       content.innerHTML = renderArticleHtml(pages[p]);
       await waitForDiagnosisTemplateImages_(content);
 
-      const canvas = await window.html2canvas(page, {
-        scale: 2,
-        useCORS: true,
-        backgroundColor: "#ffffff",
-        logging: false,
-        imageTimeout: 2000
-      });
+      const canvas = await withDiagnosisTimeout_(
+        window.html2canvas(page, {
+          scale: 2,
+          useCORS: true,
+          backgroundColor: "#ffffff",
+          logging: false,
+          imageTimeout: 2000
+        }),
+        22000,
+        "El render HTML del PDF tardó demasiado."
+      );
       if (!canvas || !canvas.width || !canvas.height) continue;
 
       const imgData = canvas.toDataURL("image/jpeg", 0.95);
@@ -1967,17 +1997,29 @@ async function buildDiagnosisPdfPayloadsForSave_(payload) {
   const shouldBuildReport = !isRecipeOnly && !isExternalPdfOnly && !isCertificateOnly && hasMeaningfulClinicalPdfContent_(data);
 
   if (shouldBuildReport) {
-    const reportPdf = await buildDiagnosisReportPdfDataUrl_(data);
+    const reportPdf = await withDiagnosisTimeout_(
+      buildDiagnosisReportPdfDataUrl_(data),
+      30000,
+      "La generación del PDF del informe tardó demasiado."
+    );
     if (reportPdf) out.report_pdf_data_url = reportPdf;
   }
 
   if (hasMeaningfulRecipeContent_(data)) {
-    const recipePdf = await buildDiagnosisRecipePdfDataUrl_(data);
+    const recipePdf = await withDiagnosisTimeout_(
+      buildDiagnosisRecipePdfDataUrl_(data),
+      30000,
+      "La generación del PDF de receta tardó demasiado."
+    );
     if (recipePdf) out.recipe_pdf_data_url = recipePdf;
   }
 
   if (isCertificateOnly || hasMeaningfulMedicalCertificateContent_(data)) {
-    const certPdf = await buildDiagnosisMedicalCertificatePdfDataUrl_(data);
+    const certPdf = await withDiagnosisTimeout_(
+      buildDiagnosisMedicalCertificatePdfDataUrl_(data),
+      30000,
+      "La generación del PDF del certificado tardó demasiado."
+    );
     if (certPdf) out.certificate_pdf_data_url = certPdf;
     if (isCertificateOnly && !certPdf) {
       throw new Error("No se pudo generar el PDF del certificado medico. Verifica los datos e intenta de nuevo.");
