@@ -3808,13 +3808,11 @@ function loadReportForEdit(reportId) {
   const mainSaveBtns = document.querySelectorAll(".btn-save-main"); 
   mainSaveBtns.forEach((b) => (b.innerText = "⏳ Cargando..."));
 
-  const useWorker = !!(window.VF_API_RUNTIME && window.VF_API_RUNTIME.backend === "worker");
-  const requestPromise = useWorker
-    ? postDiagnosisApiJson_({ action: "get_diagnosis_report", id_reporte: reportId, requester: getRequesterFromSession() })
-    : fetch(API_URL, {
-        method: "POST",
-        body: JSON.stringify({ action: "get_data", sheet: "diagnosticos_archivos", requester: getRequesterFromSession() }),
-      }).then((r) => r.json());
+  const requestPromise = postDiagnosisApiJson_({
+    action: "get_diagnosis_report",
+    id_reporte: reportId,
+    requester: getRequesterFromSession()
+  });
 
     requestPromise
     .then((res) => {

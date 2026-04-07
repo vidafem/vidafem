@@ -55,6 +55,29 @@ function postApiWithSession_(payload, urlOverride) {
     }).then(r => r.json());
 }
 
+function shouldForceWorkerForPatientAction_(action) {
+    const key = String(action || "").trim();
+    if (!key) return false;
+    return key === "get_diagnosis_history"
+        || key === "get_diagnosis_report"
+        || key === "delete_diagnosis_asset"
+        || key === "get_file_base64";
+}
+
+function resolvePatientApiUrl_(payload) {
+    const body = payload && typeof payload === "object" ? payload : {};
+    const action = String(body.action || "").trim();
+    const forceWorker = shouldForceWorkerForPatientAction_(action);
+    const runtime = window.VF_API_RUNTIME || {};
+    const urls = window.VF_API_URLS || {};
+    const env = String(runtime.env || "prod").trim().toLowerCase() === "test" ? "test" : "prod";
+    const workerUrl = urls.worker && urls.worker[env] ? String(urls.worker[env]).trim() : "";
+    if (forceWorker && workerUrl) {
+        return workerUrl + "?t=" + Date.now();
+    }
+    return API_URL + "?t=" + Date.now();
+}
+
 function getPatientSessionData_() {
     try {
         const raw = sessionStorage.getItem("vidafem_session");
@@ -1689,14 +1712,12 @@ function loadMyResults() {
     const container = document.getElementById('myDiagnosesList');
     if(!container) return;
 
-    const timestamp = new Date().getTime();
-    const useWorker = !!(window.VF_API_RUNTIME && window.VF_API_RUNTIME.backend === "worker");
-    const requestPromise = useWorker
-        ? postApiWithSession_({ action: "get_diagnosis_history", id_paciente: currentPatientId, requester: currentPatientId }, API_URL + "?t=" + timestamp)
-        : fetch(API_URL + "?t=" + timestamp, {
-            method: "POST",
-            body: JSON.stringify({ action: "get_data", sheet: "diagnosticos_archivos", requester: currentPatientId })
-          }).then(r => r.json());
+    const diagnosisPayload = {
+        action: "get_diagnosis_history",
+        id_paciente: currentPatientId,
+        requester: currentPatientId
+    };
+    const requestPromise = postApiWithSession_(diagnosisPayload, resolvePatientApiUrl_(diagnosisPayload));
 
     requestPromise
     .then(res => {
@@ -1818,6 +1839,15 @@ function loadMyResults() {
                     botonesHtml += `
                         <button onclick="downloadFeedback(this, '${extraData.pdf_receta_link}')" class="btn-primary-small" style="background:#27ae60; padding:8px 15px; border:none; color:white; cursor:pointer;">
                             <i class="fas fa-prescription-bottle-alt"></i> Receta
+                        </button>`;
+                }
+
+                // C2. Botón "Certificado PDF"
+                const certificateLink = String((extraData && (extraData.pdf_certificado_link || extraData.pdf_certificado_url)) || rep.pdf_certificado_url || rep.pdfCertificadoUrl || "").trim();
+                if (certificateLink) {
+                    botonesHtml += `
+                        <button onclick="downloadFeedback(this, '${certificateLink}')" class="btn-primary-small" style="background:#8e44ad; padding:8px 15px; border:none; color:white; cursor:pointer;">
+                            <i class="fas fa-file-medical"></i> Certificado
                         </button>`;
                 }
                 
