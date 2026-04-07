@@ -551,8 +551,6 @@ function fillMedicalCertificateModalFields_(source) {
   setValue("certDiagnostico", cert.diagnostico);
   setValue("certLugarTrabajo", cert.lugar_trabajo);
   setValue("certOcupacion", cert.ocupacion);
-  setValue("certLugarAtencion", cert.lugar_atencion);
-  setValue("certEstablecimiento", cert.establecimiento);
   setValue("certReposoSugerido", cert.reposo_sugerido);
   setValue("certReposoInicio", cert.reposo_inicio);
   setValue("certReposoFin", cert.reposo_fin);
@@ -573,8 +571,6 @@ function readMedicalCertificateFromModal_() {
     diagnostico: getValue("certDiagnostico"),
     lugar_trabajo: getValue("certLugarTrabajo"),
     ocupacion: getValue("certOcupacion"),
-    lugar_atencion: getValue("certLugarAtencion"),
-    establecimiento: getValue("certEstablecimiento"),
     reposo_sugerido: getValue("certReposoSugerido") || "NO",
     reposo_inicio: getValue("certReposoInicio"),
     reposo_fin: getValue("certReposoFin")
@@ -589,9 +585,7 @@ function validateMedicalCertificateData_(data) {
     ["cuadro_clinico", "cuadro clinico"],
     ["diagnostico", "diagnostico"],
     ["lugar_trabajo", "lugar donde labora"],
-    ["ocupacion", "ocupacion"],
-    ["lugar_atencion", "lugar de atencion"],
-    ["establecimiento", "establecimiento"]
+    ["ocupacion", "ocupacion"]
   ];
   for (let i = 0; i < required.length; i++) {
     const key = required[i][0];
@@ -620,9 +614,7 @@ function hasMeaningfulMedicalCertificateContent_(payload) {
     cert.cuadro_clinico,
     cert.diagnostico,
     cert.lugar_trabajo,
-    cert.ocupacion,
-    cert.lugar_atencion,
-    cert.establecimiento
+    cert.ocupacion
   ];
   return textFields.some((v) => !!String(v || "").trim());
 }
@@ -1186,7 +1178,7 @@ function buildDiagnosisTemplateMedicalCertificateHtml_(payload) {
     + "<p style=\"font-size:11pt; line-height:1.7; margin:0 0 2.5mm 0; text-align:justify;\">"
     + "El presente certificado se otorga a petición de la persona interesada para los fines que crea conveniente."
     + "</p>"
-    + "<p style=\"font-size:11pt; line-height:1.7; margin:0 0 2.5mm 0;\">"
+    + "<p style=\"font-size:11pt; line-height:1.7; margin:0 0 9mm 0;\">"
     + "<strong>Reposo médico:</strong> " + escapeHtmlDiagnosis_(reposoLinea)
     + (restSummary ? ("<br><strong>" + escapeHtmlDiagnosis_(restSummary) + "</strong>") : "")
     + "</p>"
@@ -1248,6 +1240,7 @@ async function buildDiagnosisMedicalCertificatePdfDataUrl_(payload) {
     "El presente certificado se otorga a petición de la persona interesada para los fines que crea conveniente."
   );
 
+  y += 10;
   writeParagraph("Reposo médico: " + reposoLinea);
   if (restSummary) {
     writeParagraph(restSummary);
