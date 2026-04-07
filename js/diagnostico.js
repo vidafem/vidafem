@@ -107,6 +107,41 @@ function postDiagnosisApiJson_(payload) {
   });
 }
 
+async function fetchDiagnosisReportReadback_(reportId) {
+  const targetId = String(reportId || "").trim();
+  const requester = getRequesterFromSession();
+  if (!targetId || !requester) return null;
+  const res = await postDiagnosisApiJson_({
+    action: "get_diagnosis_report",
+    id_reporte: targetId,
+    requester: requester
+  });
+  if (!res || !res.success || !Array.isArray(res.data)) return null;
+  return res.data.find((item) => String(item && item.id_reporte || "").trim() === targetId) || res.data[0] || null;
+}
+
+function getDiagnosisPersistedStateFromReport_(report) {
+  const src = report && typeof report === "object" ? report : {};
+  let data = {};
+  try {
+    data = src.datos_json && typeof src.datos_json === "object"
+      ? Object.assign({}, src.datos_json)
+      : JSON.parse(String(src.datos_json || "{}"));
+  } catch (e) {
+    data = {};
+  }
+  return {
+    data: data,
+    docs: {
+      pdf_url: src.pdf_url,
+      pdf_receta_link: data.pdf_receta_link || src.pdf_receta_url || src.pdfRecetaUrl,
+      pdf_certificado_link: data.pdf_certificado_link || src.pdf_certificado_url || src.pdfCertificadoUrl,
+      pdf_externo_link: data.pdf_externo_link || src.pdf_externo_url || src.pdfExternoUrl,
+      pdf_externos: src.pdf_externos || data.pdf_externos || []
+    }
+  };
+}
+
 const GENERATED_DIAGNOSIS_DOC_META = {
   report_pdf: {
     label: "PDF informe",
@@ -3365,16 +3400,34 @@ async function saveCommon(tipo, generarPdf, btnClicked, getDataFn) {
 
     if (res.success) {
       currentReportId = String(res.id_reporte || currentReportId || "").trim() || currentReportId;
-      const savedExternalPdfItems = getStoredExternalPdfItemsFromPayload_({
-        pdf_externos: res.pdf_externos || specificData.pdf_externos || [],
-        pdf_externo_link: res.pdf_externo_url || ""
-      });
+      const requiresCertificateReadback = hasMeaningfulMedicalCertificateContent_(specificData);
+      const verifiedReport = requiresCertificateReadback
+        ? await fetchDiagnosisReportReadback_(currentReportId)
+        : null;
+      const verifiedState = verifiedReport ? getDiagnosisPersistedStateFromReport_(verifiedReport) : null;
+      if (requiresCertificateReadback && !verifiedState) {
+        throw new Error("El backend respondió éxito, pero no se pudo releer el certificado guardado.");
+      }
+      if (requiresCertificateReadback) {
+        const verifiedCert = verifiedState && verifiedState.data && verifiedState.data.certificado_medico;
+        const verifiedCertPdf = String(verifiedState && verifiedState.docs && verifiedState.docs.pdf_certificado_link || "").trim();
+        if (!verifiedCert || !verifiedCertPdf) {
+          throw new Error("El certificado se generó localmente, pero Cloudflare/Supabase no lo persistió completo. Falta el PDF o los datos guardados en el backend.");
+        }
+      }
+      const savedExternalPdfItems = verifiedState
+        ? getStoredExternalPdfItemsFromPayload_(verifiedState.docs)
+        : getStoredExternalPdfItemsFromPayload_({
+            pdf_externos: res.pdf_externos || specificData.pdf_externos || [],
+            pdf_externo_link: res.pdf_externo_url || ""
+          });
       setCurrentExternalPdfItems_(savedExternalPdfItems);
       setGeneratedDocsState_({
-        pdf_url: res.pdf_url,
-        pdf_receta_link: res.pdf_receta_url || res.pdf_receta_link,
-        pdf_certificado_link: res.pdf_certificado_url || res.pdf_certificado_link,
-        pdf_externo_link: res.pdf_externo_url || res.pdf_externo_link
+        pdf_url: verifiedState ? verifiedState.docs.pdf_url : res.pdf_url,
+        pdf_receta_link: verifiedState ? verifiedState.docs.pdf_receta_link : (res.pdf_receta_url || res.pdf_receta_link),
+        pdf_certificado_link: verifiedState ? verifiedState.docs.pdf_certificado_link : (res.pdf_certificado_url || res.pdf_certificado_link),
+        pdf_externo_link: verifiedState ? verifiedState.docs.pdf_externo_link : (res.pdf_externo_url || res.pdf_externo_link),
+        pdf_externos: verifiedState ? verifiedState.docs.pdf_externos : (res.pdf_externos || [])
       });
       hasUnsavedChanges = false;
       
@@ -4821,16 +4874,34 @@ async function saveDynamicService(servicio, generatePdf, btn, recetaData) {
 
         if(res.success) {
             currentReportId = String(res.id_reporte || currentReportId || "").trim() || currentReportId;
-            const savedExternalPdfItems = getStoredExternalPdfItemsFromPayload_({
-                pdf_externos: res.pdf_externos || pdfFiles,
-                pdf_externo_link: res.pdf_externo_url || ""
+          const requiresCertificateReadback = hasMeaningfulMedicalCertificateContent_(dataObj);
+          const verifiedReport = requiresCertificateReadback
+            ? await fetchDiagnosisReportReadback_(currentReportId)
+            : null;
+          const verifiedState = verifiedReport ? getDiagnosisPersistedStateFromReport_(verifiedReport) : null;
+          if (requiresCertificateReadback && !verifiedState) {
+            throw new Error("El backend respondió éxito, pero no se pudo releer el certificado guardado.");
+          }
+          if (requiresCertificateReadback) {
+            const verifiedCert = verifiedState && verifiedState.data && verifiedState.data.certificado_medico;
+            const verifiedCertPdf = String(verifiedState && verifiedState.docs && verifiedState.docs.pdf_certificado_link || "").trim();
+            if (!verifiedCert || !verifiedCertPdf) {
+              throw new Error("El certificado se generó localmente, pero Cloudflare/Supabase no lo persistió completo. Falta el PDF o los datos guardados en el backend.");
+            }
+          }
+          const savedExternalPdfItems = verifiedState
+            ? getStoredExternalPdfItemsFromPayload_(verifiedState.docs)
+            : getStoredExternalPdfItemsFromPayload_({
+              pdf_externos: res.pdf_externos || pdfFiles,
+              pdf_externo_link: res.pdf_externo_url || ""
             });
             setCurrentExternalPdfItems_(savedExternalPdfItems);
             setGeneratedDocsState_({
-                pdf_url: res.pdf_url,
-                pdf_receta_link: res.pdf_receta_url || res.pdf_receta_link,
-              pdf_certificado_link: res.pdf_certificado_url || res.pdf_certificado_link,
-                pdf_externo_link: res.pdf_externo_url || res.pdf_externo_link
+            pdf_url: verifiedState ? verifiedState.docs.pdf_url : res.pdf_url,
+            pdf_receta_link: verifiedState ? verifiedState.docs.pdf_receta_link : (res.pdf_receta_url || res.pdf_receta_link),
+            pdf_certificado_link: verifiedState ? verifiedState.docs.pdf_certificado_link : (res.pdf_certificado_url || res.pdf_certificado_link),
+            pdf_externo_link: verifiedState ? verifiedState.docs.pdf_externo_link : (res.pdf_externo_url || res.pdf_externo_link),
+            pdf_externos: verifiedState ? verifiedState.docs.pdf_externos : (res.pdf_externos || [])
             });
             hasUnsavedChanges = false; 
             btn.innerHTML = '<i class="fas fa-check"></i> OK';
