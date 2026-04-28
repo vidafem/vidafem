@@ -899,12 +899,10 @@ function renderDiagnosisTemplateEntryHtml_(entry) {
     const selectedText = diagnosisValueToHtmlLines_(entry && entry.value);
     if (!selectedText) return "";
     return ""
-      + "<section style=\"margin:0 0 4mm 0; page-break-inside:avoid;\">"
-      + "<div style=\"display:flex;align-items:flex-start;gap:2mm;flex-wrap:wrap;font-size:10pt;line-height:1.45;color:#222;\">"
+      + "<div style=\"display:inline-flex;align-items:flex-start;gap:2mm;flex-wrap:wrap;font-size:10pt;line-height:1.45;color:#222;margin:0 6mm 3mm 0;page-break-inside:avoid;\">"
       + "<span style=\"font-weight:700;color:#36235d;\">" + label + ":</span>"
       + "<span>" + selectedText + "</span>"
-      + "</div>"
-      + "</section>";
+      + "</div>";
   }
 
   if (type === "casillas_opciones") {
