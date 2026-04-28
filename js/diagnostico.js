@@ -1010,37 +1010,52 @@ function getDiagnosisSignatureLogoSrc_() {
 function buildDiagnosisTemplateSignatureHtml_(payload) {
   const data = payload || {};
   const includeSignature = !!data.incluir_firma_virtual;
-  if (!includeSignature) return "";
+  
+  const isElectronic = document.getElementById("includeElectronicSignature") && document.getElementById("includeElectronicSignature").checked;
+  let electronicHtml = "";
+  
+  if (isElectronic && rememberedSignatureData && rememberedSignatureData.certInfo) {
+      const certName = rememberedSignatureData.certInfo.name;
+      const signDate = rememberedSignatureData.certInfo.date;
+      electronicHtml = ""
+        + "<div style=\"margin:0 auto 10mm auto; width:100%; max-width:140mm; border:1.5px solid #2980b9; border-radius:4px; padding:4mm; background-color:#f4f9fd; text-align:left;\">"
+        + "<div style=\"font-size:8pt; font-weight:bold; color:#2980b9; margin-bottom:2mm;\">FIRMADO ELECTRÓNICAMENTE POR:</div>"
+        + "<div style=\"font-size:10pt; font-weight:bold; color:#111; margin-bottom:1mm;\">" + escapeHtmlDiagnosis_(certName) + "</div>"
+        + "<div style=\"font-size:8pt; color:#333;\">Fecha: " + escapeHtmlDiagnosis_(signDate) + "</div>"
+        + "</div>";
+  }
 
-  const meta = getDiagnosisDoctorMeta_();
-  const doctorName = String(meta.name || "").trim();
-  if (!doctorName) return "";
-  const roleLine = formatDiagnosisDoctorRoleForSignature_(meta.role);
-  const registerLine = String(meta.register || "").trim();
-  const logoSrc = getDiagnosisSignatureLogoSrc_();
+  if (!includeSignature && !electronicHtml) return "";
+
+  let virtualHtml = "";
+  if (includeSignature) {
+      const meta = getDiagnosisDoctorMeta_();
+      const doctorName = String(meta.name || "").trim();
+      if (doctorName) {
+          const roleLine = formatDiagnosisDoctorRoleForSignature_(meta.role);
+          const registerLine = String(meta.register || "").trim();
+          const logoSrc = getDiagnosisSignatureLogoSrc_();
+
+          virtualHtml = ""
+            + "<div style=\"display:inline-block; min-width:95mm; padding-top:2mm; border-top:1px solid #b9b9b9;\">"
+            + "<div style=\"font-size:12pt; font-style:italic; font-weight:700; color:#2f2541; line-height:1.2;\">"
+            + escapeHtmlDiagnosis_(doctorName)
+            + "</div>"
+            + "<div style=\"display:inline-flex; align-items:center; justify-content:center; gap:3.2mm; margin-top:1.3mm;\">"
+            + (logoSrc ? "<img src=\"" + escapeHtmlDiagnosis_(logoSrc) + "\" alt=\"Logo institucional\" style=\"height:12.5mm; width:auto; object-fit:contain;\" onerror=\"this.style.display='none';\"/>" : "")
+            + "<div style=\"text-align:left;\">"
+            + "<div style=\"font-size:9pt; font-weight:700; color:#4a386d; line-height:1.25;\">" + roleLine + "</div>"
+            + (registerLine ? "<div style=\"font-size:8.3pt; font-style:italic; color:#5a5a5a; margin-top:0.7mm;\">Reg. San. " + escapeHtmlDiagnosis_(registerLine) + "</div>" : "")
+            + "</div>"
+            + "</div>"
+            + "</div>";
+      }
+  }
 
   return ""
-    + "<section style=\"margin-top:39mm; page-break-inside:avoid; text-align:center;\">"
-    + "<div style=\"display:inline-block; min-width:95mm; padding-top:2mm; border-top:1px solid #b9b9b9;\">"
-    + "<div style=\"font-size:12pt; font-style:italic; font-weight:700; color:#2f2541; line-height:1.2;\">"
-    + escapeHtmlDiagnosis_(doctorName)
-    + "</div>"
-    + "<div style=\"display:inline-flex; align-items:center; justify-content:center; gap:3.2mm; margin-top:1.3mm;\">"
-    + (logoSrc
-      ? "<img src=\"" + escapeHtmlDiagnosis_(logoSrc) + "\" alt=\"Logo institucional\" style=\"height:12.5mm; width:auto; object-fit:contain;\" onerror=\"this.style.display='none';\"/>"
-      : "")
-    + "<div style=\"text-align:left;\">"
-    + "<div style=\"font-size:9pt; font-weight:700; color:#4a386d; line-height:1.25;\">"
-    + roleLine
-    + "</div>"
-    + (registerLine
-      ? "<div style=\"font-size:8.3pt; font-style:italic; color:#5a5a5a; margin-top:0.7mm;\">Reg. San. "
-        + escapeHtmlDiagnosis_(registerLine)
-        + "</div>"
-      : "")
-    + "</div>"
-    + "</div>"
-    + "</div>"
+    + "<section style=\"margin-top:15mm; page-break-inside:avoid; text-align:center;\">"
+    + electronicHtml
+    + virtualHtml
     + "</section>";
 }
 
@@ -1206,6 +1221,66 @@ function buildDiagnosisTemplateMedicalCertificateHtml_(payload) {
     + "</article>";
 }
 
+function drawSignaturesOnJsPdfFallback_(doc, y, data) {
+    const isElectronic = document.getElementById("includeElectronicSignature") && document.getElementById("includeElectronicSignature").checked;
+    
+    if (isElectronic && rememberedSignatureData && rememberedSignatureData.certInfo) {
+        y += 10;
+        y = ensureDiagnosisPdfSpace_(doc, y, 30);
+        doc.setDrawColor(41, 128, 185); 
+        doc.setFillColor(244, 249, 253);
+        doc.setLineWidth(0.5);
+        doc.rect(35, y, 140, 20, "FD");
+        
+        doc.setFont("helvetica", "bold");
+        doc.setFontSize(8);
+        doc.setTextColor(41, 128, 185);
+        doc.text("FIRMADO ELECTRÓNICAMENTE POR:", 39, y + 6);
+        
+        doc.setFontSize(10);
+        doc.setTextColor(17, 17, 17);
+        doc.text(rememberedSignatureData.certInfo.name, 39, y + 12);
+        
+        doc.setFont("helvetica", "normal");
+        doc.setFontSize(8);
+        doc.setTextColor(51, 51, 51);
+        doc.text("Fecha: " + rememberedSignatureData.certInfo.date, 39, y + 17);
+        
+        y += 20; 
+    }
+
+    if (data.incluir_firma_virtual) {
+        const meta = getDiagnosisDoctorMeta_();
+        const doctorName = String(meta.name || "").trim();
+        if (doctorName) {
+            y += 20;
+            y = ensureDiagnosisPdfSpace_(doc, y, 20);
+            doc.setDrawColor(190, 190, 190);
+            doc.setLineWidth(0.3);
+            doc.line(65, y, 145, y);
+            
+            doc.setFont("helvetica", "bold");
+            doc.setFontSize(10);
+            doc.setTextColor(47, 37, 65);
+            doc.text(doctorName, 105, y + 5, { align: "center" });
+            
+            doc.setFont("helvetica", "normal");
+            doc.setFontSize(8);
+            doc.text(meta.role, 105, y + 9, { align: "center" });
+            
+            if (meta.register) {
+                doc.setFont("helvetica", "italic");
+                doc.setFontSize(7);
+                doc.setTextColor(90, 90, 90);
+                doc.text("Reg. San. " + meta.register, 105, y + 13, { align: "center" });
+            }
+        }
+    }
+    
+    doc.setTextColor(0, 0, 0);
+    return y;
+}
+
 async function buildDiagnosisMedicalCertificatePdfDataUrl_(payload) {
   const data = payload || {};
   if (!hasMeaningfulMedicalCertificateContent_(data)) return "";
@@ -1266,18 +1341,7 @@ async function buildDiagnosisMedicalCertificatePdfDataUrl_(payload) {
     writeParagraph(restSummary);
   }
 
-  if (data.incluir_firma_virtual) {
-    const doctorName = getDiagnosisDoctorDisplayName_();
-    if (doctorName) {
-      y += 14;
-      y = ensureDiagnosisPdfSpace_(doc, y, 20);
-      doc.setDrawColor(190, 190, 190);
-      doc.line(120, y + 8, 190, y + 8);
-      doc.setFont("helvetica", "bold");
-      doc.setFontSize(10);
-      doc.text(doctorName, 155, y + 14, { align: "center" });
-    }
-  }
+  y = drawSignaturesOnJsPdfFallback_(doc, y, data);
 
   return doc.output("datauristring");
 }
@@ -1986,15 +2050,7 @@ async function buildDiagnosisReportPdfDataUrl_(payload) {
 
   y = await appendDiagnosisPdfImages_(doc, y + 2, resolvedImages);
 
-  if (data.incluir_firma_virtual) {
-    y += 30;
-    y = ensureDiagnosisPdfSpace_(doc, y, 20);
-    doc.setDrawColor(190, 190, 190);
-    doc.line(120, y + 8, 190, y + 8);
-    doc.setFont("helvetica", "bold");
-    doc.setFontSize(10);
-    doc.text("Firma virtual", 142, y + 14);
-  }
+  y = drawSignaturesOnJsPdfFallback_(doc, y, data);
 
   return doc.output("datauristring");
 }
@@ -2063,15 +2119,7 @@ async function buildDiagnosisRecipePdfDataUrl_(payload) {
     y = writeDiagnosisPdfField_(doc, y, "Observaciones", obs);
   }
 
-  if (data.incluir_firma_virtual) {
-    y += 30;
-    y = ensureDiagnosisPdfSpace_(doc, y, 20);
-    doc.setDrawColor(190, 190, 190);
-    doc.line(120, y + 8, 190, y + 8);
-    doc.setFont("helvetica", "bold");
-    doc.setFontSize(10);
-    doc.text("Firma virtual", 142, y + 14);
-  }
+  y = drawSignaturesOnJsPdfFallback_(doc, y, data);
 
   return doc.output("datauristring");
 }
@@ -4867,62 +4915,11 @@ window.applyElectronicSignature = function() {
 
 // Función que estampa el sello visual inalterable en el PDF usando pdf-lib
 async function applyElectronicSignatureToPdf_(dataUrl) {
-    const checkbox = document.getElementById("includeElectronicSignature");
-    if (!checkbox || !checkbox.checked || !rememberedSignatureData.certInfo) return dataUrl;
-    if (!window.PDFLib) return dataUrl;
-
-    try {
-        const { PDFDocument, rgb, StandardFonts } = window.PDFLib;
-        const parts = dataUrl.split(',');
-        const binary = atob(parts[1]);
-        const bytes = new Uint8Array(binary.length);
-        for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
-
-        const pdfDoc = await PDFDocument.load(bytes);
-        const pages = pdfDoc.getPages();
-        const lastPage = pages[pages.length - 1];
-
-        const fontBold = await pdfDoc.embedFont(StandardFonts.HelveticaBold);
-        const fontRegular = await pdfDoc.embedFont(StandardFonts.Helvetica);
-        
-        const certName = rememberedSignatureData.certInfo.name;
-        const signDate = rememberedSignatureData.certInfo.date;
-
-        // Dibujar la caja del sello en la parte inferior izquierda
-        const boxWidth = 190;
-        const boxHeight = 45;
-        const marginX = 14; 
-        const marginY = 14; 
-
-        lastPage.drawRectangle({
-            x: marginX,
-            y: marginY,
-            width: boxWidth,
-            height: boxHeight,
-            borderColor: rgb(0.16, 0.5, 0.72),
-            borderWidth: 1.2,
-            color: rgb(0.96, 0.98, 1),
-            opacity: 0.9
-        });
-
-        lastPage.drawText("FIRMADO ELECTRÓNICAMENTE POR:", {
-            x: marginX + 10, y: marginY + 28, size: 8, font: fontBold, color: rgb(0.16, 0.5, 0.72)
-        });
-        lastPage.drawText(certName, {
-            x: marginX + 10, y: marginY + 16, size: 10, font: fontBold, color: rgb(0.1, 0.1, 0.1)
-        });
-        lastPage.drawText(`Fecha: ${signDate}`, {
-            x: marginX + 10, y: marginY + 6, size: 8, font: fontRegular, color: rgb(0.3, 0.3, 0.3)
-        });
-
-        const pdfBytes = await pdfDoc.save();
-        let binaryStr = "";
-        for (let i = 0; i < pdfBytes.length; i++) binaryStr += String.fromCharCode(pdfBytes[i]);
-        return "data:application/pdf;base64," + btoa(binaryStr);
-    } catch (e) {
-        console.error("Error estampando la firma electrónica visual:", e);
-        return dataUrl;
-    }
+    // La firma visual ahora se dibuja de forma nativa dentro de las plantillas HTML
+    // y en el fallback de jsPDF para asegurar que siempre quede exactamente
+    // encima de la firma virtual (sin importar el tamaño del documento).
+    // Se mantiene esta función intacta para futuras implementaciones de PAdES.
+    return dataUrl;
 }
 
 // Auxiliar para leer la receta
