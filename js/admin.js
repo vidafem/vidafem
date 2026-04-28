@@ -1264,38 +1264,21 @@ window.handleP12Upload = function(input) {
   const file = input.files && input.files[0];
   if (!file) return;
 
-  const password = prompt("Seguridad de Bóveda:\nPor favor ingresa la contraseña de tu archivo .p12 para verificarlo antes de subirlo:");
-  if (!password) {
+  const certName = prompt("Para personalizar tu sello visual, ingresa el nombre del titular de esta firma (Ej: Dra. María López):", "Profesional Médico");
+  if (certName === null) {
       input.value = "";
       return;
   }
 
   const reader = new FileReader();
   reader.onload = function(e) {
-      const binaryStr = e.target.result;
-
-      let commonName = "Profesional Médico";
-      try {
-          const p12Asn1 = forge.asn1.fromDer(binaryStr);
-          const p12 = forge.pkcs12.pkcs12FromAsn1(p12Asn1, false, password);
-          const certBags = p12.getBags({bagType: forge.pki.oids.certBag})[forge.pki.oids.certBag];
-          const cert = certBags[0].cert;
-          const subject = cert.subject.attributes.find(a => a.shortName === 'CN' || a.name === 'commonName');
-          if (subject) commonName = subject.value;
-      } catch(err) {
-          alert("Contraseña incorrecta o archivo .p12 inválido. No se subió a la bóveda.");
-          input.value = "";
-          return;
-      }
-
-      const base64 = btoa(binaryStr);
-      const dataUrl = "data:application/x-pkcs12;base64," + base64;
+      const dataUrl = e.target.result;
       const requester = getRequesterFromSession();
       
       const box = document.getElementById("doctorSignatureStatusBox");
       if (box) box.innerHTML = '<div style="padding:12px;"><i class="fas fa-spinner fa-spin"></i> Subiendo a la bóveda segura...</div>';
 
-      postApiWithSession_({ action: "upload_p12", p12_data_url: dataUrl, cert_name: commonName, requester: requester }, getAdminWorkerApiUrl_())
+      postApiWithSession_({ action: "upload_p12", p12_data_url: dataUrl, cert_name: certName, requester: requester }, getAdminWorkerApiUrl_())
       .then(res => {
           if (res.success) {
               if (window.showToast) window.showToast("Firma guardada exitosamente.", "success");
