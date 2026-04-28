@@ -4673,6 +4673,17 @@ document.addEventListener("DOMContentLoaded", function() {
 });
 // --- FUNCIÓN MAESTRA DE GUARDADO (Poner al final de diagnostico.js) ---
 function handleMasterSave(generatePdf, btn) {
+    const isElectronicSignatureChecked = document.getElementById("includeElectronicSignature") && document.getElementById("includeElectronicSignature").checked;
+    
+    if (isElectronicSignatureChecked && generatePdf) {
+        openElectronicSignatureModal(btn);
+        return; // Pausamos el flujo aquí hasta que ponga la clave en el modal
+    }
+    
+    executeMasterSaveFlow(generatePdf, btn);
+}
+
+function executeMasterSaveFlow(generatePdf, btn) {
     const servicio = document.getElementById("reportTypeSelector").value;
     
     // 1. Recolectar datos universales (Receta)
@@ -4701,6 +4712,54 @@ function handleMasterSave(generatePdf, btn) {
         saveDynamicService(servicio, generatePdf, btn, receta);
     }
 }
+
+// ==========================================
+// 7. LÓGICA DE FIRMA ELECTRÓNICA (CAPA VISUAL)
+// ==========================================
+let pendingSignatureBtn = null;
+let rememberedSignatureData = { fileData: null, password: "" };
+
+window.openElectronicSignatureModal = function(btn) {
+    pendingSignatureBtn = btn;
+    const modal = document.getElementById("modalElectronicSignature");
+    if (modal) {
+        // Restaurar estado si el usuario eligió "Recordar" en el paciente anterior
+        if (rememberedSignatureData.password) {
+            document.getElementById("electronicSignaturePassword").value = rememberedSignatureData.password;
+            document.getElementById("rememberElectronicSignature").checked = true;
+        }
+        modal.classList.add("active");
+    }
+};
+
+window.closeElectronicSignatureModal = function() {
+    const modal = document.getElementById("modalElectronicSignature");
+    if (modal) modal.classList.remove("active");
+    pendingSignatureBtn = null;
+};
+
+window.applyElectronicSignature = function() {
+    const password = document.getElementById("electronicSignaturePassword").value;
+    const remember = document.getElementById("rememberElectronicSignature").checked;
+    
+    if (!password) {
+        alert("Debes ingresar la contraseña de tu firma electrónica.");
+        return;
+    }
+    
+    if (remember) {
+        rememberedSignatureData.password = password;
+    } else {
+        rememberedSignatureData = { fileData: null, password: "" };
+    }
+    
+    closeElectronicSignatureModal();
+    
+    // Reanudamos el flujo maestro de guardado (Por ahora simula el paso sin firmar criptográficamente)
+    if (pendingSignatureBtn) {
+        executeMasterSaveFlow(true, pendingSignatureBtn);
+    }
+};
 
 // Auxiliar para leer la receta
 function getUniversalRecipeData() {
