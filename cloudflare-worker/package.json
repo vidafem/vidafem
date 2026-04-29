@@ -1,22 +1,13 @@
 {
-  "name": "vidafem-cloudflare-worker",
+  "name": "vidafem-api",
+  "version": "1.0.0",
   "private": true,
-  "type": "module",
-  "scripts": {
-    "dev": "wrangler dev",
-    "dev:remote": "wrangler dev --remote",
-    "deploy": "wrangler deploy",
-    "check": "node --check src/index.js"
-  },
-  "devDependencies": {
-    "wrangler": "^4.86.0"
-  },
+  "main": "src/index.js",
   "dependencies": {
-    "@signpdf/placeholder-plain": "^3.3.0",
-    "@signpdf/signer-p12": "^3.3.0",
-    "@signpdf/signpdf": "^3.3.0",
+    "@signpdf/placeholder-plain": "^3.0.0",
+    "@signpdf/signer-p12": "^3.0.0",
+    "@signpdf/signpdf": "^3.0.0",
     "buffer": "^6.0.3",
-    "node-signpdf": "^3.0.0",
-    "wangler": "^0.0.8"
+    "node-forge": "^1.3.1"
   }
 }
