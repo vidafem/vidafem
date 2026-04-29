@@ -1963,7 +1963,7 @@ window.applySignExisting = async function() {
         const dragEl = document.getElementById('signatureDraggable');
         const canvasW = canvas.offsetWidth || canvas.width; const canvasH = canvas.offsetHeight || canvas.height;
         const dragW = dragEl.offsetWidth || 170; const dragH = dragEl.offsetHeight || 45;
-        dragEl.style.left = Math.max(0, (canvasW / 2) - (dragW / 2)) + 'px'; dragEl.style.top = Math.max(0, (canvasH / 2) - (dragH / 2)) + 'px';
+        dragEl.style.left = Math.max(0, (canvasW / 2) - (dragW / 2)) + 'px'; dragEl.style.top = '30px';
         
         openModal('modalSignPosition');
         
