@@ -5133,17 +5133,8 @@ async function saveDynamicService(servicio, generatePdf, btn, recetaData) {
     // Obtener campos dinámicos para el servicio seleccionado
     const campos = CONFIG_CAMPOS[servicio] || [];
 
-    let pdfWindow = null;
-
-    // 2. ABRIR VENTANA DE CARGA (Anti-Bloqueo)
     if (generatePdf) {
-        pdfWindow = window.open("", "_blank");
-        if (pdfWindow) {
-            pdfWindow.document.write("<html><body style='text-align:center; padding:50px; font-family:sans-serif; background:#f4f4f9;'><h2>⏳ Generando Informe...</h2><p>Por favor espere, estamos procesando las imágenes y creando su PDF.</p></body></html>");
-        } else {
-            alert("⚠️ El navegador bloqueó la ventana emergente. Por favor permita pop-ups para este sitio.");
-            return; // Cancelar si no se puede abrir la ventana
-        }
+        showSavingOverlay("Generando informe...");
     }
     
     const originalText = btn.innerHTML;
@@ -5246,9 +5237,11 @@ async function saveDynamicService(servicio, generatePdf, btn, recetaData) {
 
         if (generatePdf) {
             btn.innerHTML = '<i class="fas fa-circle-notch fa-spin"></i> Armando PDF...';
+        if (document.getElementById('savingOverlayText')) document.getElementById('savingOverlayText').innerText = "Armando PDF...";
           generatedPdfPayload = await buildDiagnosisPdfPayloadsForSave_(dataObj);
             Object.assign(dataObj, generatedPdfPayload);
             btn.innerHTML = '<i class="fas fa-circle-notch fa-spin"></i> Subiendo...';
+        if (document.getElementById('savingOverlayText')) document.getElementById('savingOverlayText').innerText = "Guardando en la nube...";
         } else if (hasMeaningfulMedicalCertificateContent_(dataObj)) {
             generatedPdfPayload = await buildDiagnosisCertificatePdfPayloadForSave_(dataObj);
             Object.assign(dataObj, generatedPdfPayload);
@@ -5339,12 +5332,12 @@ async function saveDynamicService(servicio, generatePdf, btn, recetaData) {
             }
         } else {
             // ERROR DEL SERVIDOR
-            if(pdfWindow) pdfWindow.close();
+        hideSavingOverlay();
             alert("❌ ERROR DEL SERVIDOR:\n" + res.message);
             btn.disabled = false; btn.innerHTML = originalText;
         }
     } catch (e) {
-        if(pdfWindow) pdfWindow.close();
+    hideSavingOverlay();
         console.error(e);
         alert("Error: " + e.message);
         btn.disabled = false; btn.innerHTML = originalText;
