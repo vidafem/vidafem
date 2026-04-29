@@ -5549,7 +5549,7 @@ async function signPdfWithCloudflareWorker_(env, doctorId, password, pdfDataUrl)
       });
 
       const signedBytes = signer.sign(pdfBuffer, Buffer.from(p12Buffer), { passphrase: password });
-      const signedBase64 = arrayBufferToBase64Worker_(signedBytes);
+      const signedBase64 = Buffer.from(signedBytes).toString("base64");
       
       return { success: true, dataUrl: "data:application/pdf;base64," + signedBase64 };
     } catch (e) {

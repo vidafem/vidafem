@@ -4446,9 +4446,8 @@ __name(parseDataUrlWorker_, "parseDataUrlWorker_");
 function arrayBufferToBase64Worker_(buffer) {
   const bytes = new Uint8Array(buffer || new ArrayBuffer(0));
   let binary = "";
-  const chunkSize = 32768;
-  for (let i = 0; i < bytes.length; i += chunkSize) {
-    binary += String.fromCharCode.apply(null, bytes.subarray(i, i + chunkSize));
+  for (let i = 0; i < bytes.length; i++) {
+    binary += String.fromCharCode(bytes[i])
   }
   return btoa(binary);
 }
@@ -5703,7 +5702,7 @@ async function signPdfWithCloudflareWorker_(env, doctorId, password, pdfDataUrl)
         location: 'Ecuador'
       });
       const signedBytes = signer.sign(pdfBuffer, Buffer.from(p12Buffer), { passphrase: password });
-      const signedBase64 = arrayBufferToBase64Worker_(signedBytes);
+      const signedBase64 = Buffer.from(signedBytes).toString("base64");
       return { success: true, dataUrl: "data:application/pdf;base64," + signedBase64 };
     } catch (e) {
       console.warn("Worker: PAdES Error:", e.message);
@@ -5729,9 +5728,9 @@ async function handleSignExistingDiagnosisAsset_(body, env, requestUrl) {
   if (!report) return { status: 404, payload: { success: false, message: "Reporte no encontrado." } };
   const patientAccess = await resolveAccessiblePatientForSession_(env, validation.session, report.id_paciente);
   if (!patientAccess.ok) return patientAccess.result;
-  const newKey = joinStorageObjectKey_([report.id_paciente, reportId, "firmados", assetType + "_" + Date.now() + "_" + randomHex_(4)]);
+  const newKey = joinStorageObjectKey_([report.id_paciente, reportId, "firmados", assetType + "_" + Date.now() + "_" + randomHex_(4) + ".pdf"]);
   const upload = await uploadDataUrlToWorkerStorage_(env, requestUrl, newKey, signed.dataUrl);
-  if (!upload.success) return { status: 500, payload: { success: false, message: "No se pudo guardar el PDF firmado." } };
+   if (!upload.success) return { status: 500, payload: { success: false, message: "No se pudo guardar el PDF firmado: " + (upload.message || "Error desconocido") } };
   const newUrl = upload.url;
   const payload = parseStoredDiagnosisJson_(report.datos_json);
   let updatedPdfUrl = normalizeText_(report.pdf_url);
