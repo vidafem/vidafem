@@ -87,7 +87,7 @@ html, body {
 }
 
 .welcome-logo {
-    width: min(48vw, 220px);
+    width: min(38vw, 220px);
     height: auto;
     filter: drop-shadow(0 16px 28px rgba(54, 35, 93, 0.16));
 }
