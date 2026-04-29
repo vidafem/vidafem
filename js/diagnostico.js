@@ -3374,6 +3374,42 @@ function saveGeneral(generarPdf, btn) {
   });
 }
 
+// Overlay dinámico para guardar
+function showSavingOverlay(message) {
+    let overlay = document.getElementById('savingOverlay');
+    if (!overlay) {
+        overlay = document.createElement('div');
+        overlay.id = 'savingOverlay';
+        overlay.style.cssText = 'position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.85);z-index:99999;display:flex;justify-content:center;align-items:center;flex-direction:column;color:white;font-family:sans-serif; transition: opacity 0.3s;';
+        overlay.innerHTML = `
+            <div id="savingOverlayIcon" style="font-size:4rem; margin-bottom:20px; color:#3498db;"><i class="fas fa-circle-notch fa-spin"></i></div>
+            <h2 id="savingOverlayText" style="margin:0; font-size:1.4rem; font-weight:normal; text-align:center; padding: 0 20px;">${message}</h2>
+        `;
+        document.body.appendChild(overlay);
+    } else {
+        document.getElementById('savingOverlayIcon').innerHTML = '<i class="fas fa-circle-notch fa-spin" style="color:#3498db;"></i>';
+        document.getElementById('savingOverlayText').innerText = message;
+        overlay.style.display = 'flex';
+        overlay.style.opacity = '1';
+    }
+}
+function completeSavingOverlay(message) {
+    const icon = document.getElementById('savingOverlayIcon');
+    const text = document.getElementById('savingOverlayText');
+    if (icon) icon.innerHTML = '<i class="fas fa-check-circle" style="color:#2ecc71; font-size:5rem; animation: popInOverlay 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;"></i>';
+    if (text) text.innerText = message;
+    if (!document.getElementById('savingOverlayAnim')) {
+        const style = document.createElement('style');
+        style.id = 'savingOverlayAnim';
+        style.innerHTML = '@keyframes popInOverlay { 0% { transform: scale(0); opacity: 0; } 100% { transform: scale(1); opacity: 1; } }';
+        document.head.appendChild(style);
+    }
+}
+function hideSavingOverlay() {
+    const overlay = document.getElementById('savingOverlay');
+    if (overlay) { overlay.style.opacity = '0'; setTimeout(() => { overlay.style.display = 'none'; }, 300); }
+}
+
 async function saveCommon(tipo, generarPdf, btnClicked, getDataFn) {
   if (!currentPatientId) return alert("Error ID Paciente");
   if (isDiagnosisSaveInProgress) return alert("Ya hay un guardado en proceso. Espera un momento.");
@@ -3389,18 +3425,8 @@ async function saveCommon(tipo, generarPdf, btnClicked, getDataFn) {
     if (!ok) return;
   }
   
-  // --- CORRECCIÓN: Declarar la variable aquí ---
-  let pdfWindow = null;
-
-  // 1. ABRIR VENTANA DE CARGA (Anti-Bloqueo)
   if (generarPdf) {
-      pdfWindow = window.open("", "_blank");
-      if (pdfWindow) {
-          pdfWindow.document.write("<html><body style='text-align:center; padding:50px; font-family:sans-serif;'><h2>⏳ Generando Documento...</h2><p>Procesando solicitud...</p></body></html>");
-      } else {
-          alert("⚠️ Habilite las ventanas emergentes para ver el PDF.");
-          return; // Cancelar si está bloqueado
-      }
+      showSavingOverlay("Generando documento...");
   }
 
   const originalContent = btnClicked.innerHTML;
@@ -3410,6 +3436,7 @@ async function saveCommon(tipo, generarPdf, btnClicked, getDataFn) {
 
   if (generarPdf) {
     btnClicked.innerHTML = `<i class="fas fa-circle-notch fa-spin-fast"></i> Abriendo PDF...`;
+    if (document.getElementById('savingOverlayText')) document.getElementById('savingOverlayText').innerText = "Armando PDF...";
     btnClicked.style.background = "#e67e22";
   } else {
     btnClicked.innerHTML = `<i class="fas fa-circle-notch fa-spin-fast"></i> Guardando...`;
@@ -3488,9 +3515,11 @@ async function saveCommon(tipo, generarPdf, btnClicked, getDataFn) {
 
     if (generarPdf) {
       btnClicked.innerHTML = `<i class="fas fa-circle-notch fa-spin-fast"></i> Armando PDF...`;
+      if (document.getElementById('savingOverlayText')) document.getElementById('savingOverlayText').innerText = "Armando PDF...";
       generatedPdfPayload = await buildDiagnosisPdfPayloadsForSave_(data);
       Object.assign(data, generatedPdfPayload);
       btnClicked.innerHTML = `<i class="fas fa-circle-notch fa-spin-fast"></i> Subiendo...`;
+      if (document.getElementById('savingOverlayText')) document.getElementById('savingOverlayText').innerText = "Guardando en la nube...";
     } else if (hasMeaningfulMedicalCertificateContent_(data)) {
       generatedPdfPayload = await buildDiagnosisCertificatePdfPayloadForSave_(data);
       Object.assign(data, generatedPdfPayload);
@@ -3539,64 +3568,8 @@ async function saveCommon(tipo, generarPdf, btnClicked, getDataFn) {
       btnClicked.innerHTML = `<i class="fas fa-check"></i> ¡Listo!`;
       btnClicked.style.background = "#27ae60";
       
-      if (generarPdf && pdfWindow) {
-          const primaryPdf = String(res.pdf_url || "").trim();
-          const recipePdf = String(res.pdf_receta_url || "").trim();
-          const certificatePdf = String(res.pdf_certificado_url || "").trim();
-          const externalPdf = savedExternalPdfItems.length
-            ? String(savedExternalPdfItems[0].url || "").trim()
-            : String(res.pdf_externo_url || "").trim();
-          const hasRecipeContent = hasMeaningfulRecipeContent_(specificData);
-          const hasCertificateContent = hasMeaningfulMedicalCertificateContent_(specificData);
-          const hasExternalPdf = savedExternalPdfItems.length > 0;
-          let targetPdfUrl = "";
-
-          if (tipo === "EXAMENPDF") {
-            targetPdfUrl = externalPdf || certificatePdf || recipePdf || primaryPdf;
-          } else if (tipo === "CERTIFICADO MEDICO") {
-            targetPdfUrl = certificatePdf || recipePdf || externalPdf || primaryPdf;
-          } else if (tipo === "RECETA") {
-            targetPdfUrl = recipePdf || certificatePdf || externalPdf || primaryPdf;
-          } else if (tipo === "TODO") {
-            if (hasRecipeContent && recipePdf) targetPdfUrl = recipePdf;
-            else if (hasCertificateContent && certificatePdf) targetPdfUrl = certificatePdf;
-            else if (hasExternalPdf && externalPdf) targetPdfUrl = externalPdf;
-            else targetPdfUrl = certificatePdf || recipePdf || externalPdf || primaryPdf;
-          } else {
-            targetPdfUrl = primaryPdf || certificatePdf || recipePdf || externalPdf;
-          }
-
-            if (targetPdfUrl) {
-              await openDiagnosisPdfInWindow_(pdfWindow, targetPdfUrl);
-          } else {
-              const localReportPdf = String(generatedPdfPayload && generatedPdfPayload.report_pdf_data_url || "").trim();
-              const localRecipePdf = String(generatedPdfPayload && generatedPdfPayload.recipe_pdf_data_url || "").trim();
-              const localCertificatePdf = String(generatedPdfPayload && generatedPdfPayload.certificate_pdf_data_url || "").trim();
-              let localTargetPdf = "";
-              if (tipo === "EXAMENPDF") {
-                localTargetPdf = localCertificatePdf || localRecipePdf || localReportPdf;
-              } else if (tipo === "CERTIFICADO MEDICO") {
-                localTargetPdf = localCertificatePdf || localRecipePdf || localReportPdf;
-              } else if (tipo === "RECETA") {
-                localTargetPdf = localRecipePdf || localCertificatePdf || localReportPdf;
-              } else if (tipo === "TODO") {
-                if (hasRecipeContent && localRecipePdf) localTargetPdf = localRecipePdf;
-                else if (hasCertificateContent && localCertificatePdf) localTargetPdf = localCertificatePdf;
-                else localTargetPdf = localCertificatePdf || localRecipePdf || localReportPdf;
-              } else {
-                localTargetPdf = localReportPdf || localCertificatePdf || localRecipePdf;
-              }
-
-              if (localTargetPdf) {
-                await openDiagnosisPdfInWindow_(pdfWindow, localTargetPdf);
-                if (window.showToast) {
-                  window.showToast("Guardado correcto. Se abrio el PDF local porque el servidor no devolvio enlace.", "warning");
-                }
-              } else {
-                pdfWindow.close();
-                alert("Guardado, pero no se pudo obtener ninguna URL de PDF (ni remota ni local).");
-              }
-          }
+      if (generarPdf) {
+          completeSavingOverlay("¡Documento generado con éxito!");
           setTimeout(() => window.navigateWithEnv(`clinical.html?id=${currentPatientId}&tab=diagnostico`), 1500);
       } else {
           setTimeout(() => {
@@ -3619,12 +3592,12 @@ async function saveCommon(tipo, generarPdf, btnClicked, getDataFn) {
           }, 800);
       }
     } else {
-      if(pdfWindow) pdfWindow.close();
+      hideSavingOverlay();
       alert("Error: " + (res.message || "No se pudo guardar."));
       restoreAllButtons(allBtns, btnClicked, originalContent);
     }
   } catch (e) {
-    if(pdfWindow) pdfWindow.close();
+    hideSavingOverlay();
     console.error(e);
     alert(e && e.message ? e.message : "Error de conexión.");
     restoreAllButtons(allBtns, btnClicked, originalContent);
@@ -5133,17 +5106,8 @@ async function saveDynamicService(servicio, generatePdf, btn, recetaData) {
     // Obtener campos dinámicos para el servicio seleccionado
     const campos = CONFIG_CAMPOS[servicio] || [];
 
-    let pdfWindow = null;
-
-    // 2. ABRIR VENTANA DE CARGA (Anti-Bloqueo)
     if (generatePdf) {
-        pdfWindow = window.open("", "_blank");
-        if (pdfWindow) {
-            pdfWindow.document.write("<html><body style='text-align:center; padding:50px; font-family:sans-serif; background:#f4f4f9;'><h2>⏳ Generando Informe...</h2><p>Por favor espere, estamos procesando las imágenes y creando su PDF.</p></body></html>");
-        } else {
-            alert("⚠️ El navegador bloqueó la ventana emergente. Por favor permita pop-ups para este sitio.");
-            return; // Cancelar si no se puede abrir la ventana
-        }
+        showSavingOverlay("Generando informe...");
     }
     
     const originalText = btn.innerHTML;
@@ -5246,9 +5210,11 @@ async function saveDynamicService(servicio, generatePdf, btn, recetaData) {
 
         if (generatePdf) {
             btn.innerHTML = '<i class="fas fa-circle-notch fa-spin"></i> Armando PDF...';
+        if (document.getElementById('savingOverlayText')) document.getElementById('savingOverlayText').innerText = "Armando PDF...";
           generatedPdfPayload = await buildDiagnosisPdfPayloadsForSave_(dataObj);
             Object.assign(dataObj, generatedPdfPayload);
             btn.innerHTML = '<i class="fas fa-circle-notch fa-spin"></i> Subiendo...';
+        if (document.getElementById('savingOverlayText')) document.getElementById('savingOverlayText').innerText = "Guardando en la nube...";
         } else if (hasMeaningfulMedicalCertificateContent_(dataObj)) {
             generatedPdfPayload = await buildDiagnosisCertificatePdfPayloadForSave_(dataObj);
             Object.assign(dataObj, generatedPdfPayload);
@@ -5300,34 +5266,9 @@ async function saveDynamicService(servicio, generatePdf, btn, recetaData) {
             btn.innerHTML = '<i class="fas fa-check"></i> OK';
             btn.style.background = "#27ae60";
             
-            // SI SE PIDIÓ PDF Y TENEMOS VENTANA ABIERTA
-            if(generatePdf && pdfWindow) {
-                const mainPdfUrl = String(res.pdf_url || "").trim();
-                const recipePdfUrl = String(res.pdf_receta_url || "").trim();
-              const certificatePdfUrl = String(res.pdf_certificado_url || "").trim();
-                const externalPdfUrl = savedExternalPdfItems.length
-                    ? String(savedExternalPdfItems[0].url || "").trim()
-                    : String(res.pdf_externo_url || "").trim();
-              const targetPdfUrl = mainPdfUrl || certificatePdfUrl || recipePdfUrl || externalPdfUrl;
-                if(targetPdfUrl) {
-                    console.log("PDF URL recibida:", targetPdfUrl);
-                  await openDiagnosisPdfInWindow_(pdfWindow, targetPdfUrl);
-                    setTimeout(() => window.navigateWithEnv(`clinical.html?id=${currentPatientId}&tab=diagnostico`), 2000);
-                } else {
-                  const localReportPdf = String(generatedPdfPayload && generatedPdfPayload.report_pdf_data_url || "").trim();
-                  const localRecipePdf = String(generatedPdfPayload && generatedPdfPayload.recipe_pdf_data_url || "").trim();
-                  const localCertificatePdf = String(generatedPdfPayload && generatedPdfPayload.certificate_pdf_data_url || "").trim();
-                  const localTargetPdf = localReportPdf || localCertificatePdf || localRecipePdf;
-                  if (localTargetPdf) {
-                    await openDiagnosisPdfInWindow_(pdfWindow, localTargetPdf);
-                    alert("⚠️ Aviso: Se guardo y se abrio PDF local porque el servidor no devolvio enlace.");
-                    setTimeout(() => window.navigateWithEnv(`clinical.html?id=${currentPatientId}&tab=diagnostico`), 2000);
-                  } else {
-                    pdfWindow.close();
-                    alert("⚠️ Aviso: Se guardaron los datos pero no se pudo obtener PDF remoto ni local.");
-                    window.navigateWithEnv(`clinical.html?id=${currentPatientId}&tab=diagnostico`);
-                  }
-                }
+            if(generatePdf) {
+                completeSavingOverlay("¡Informe generado con éxito!");
+                setTimeout(() => window.navigateWithEnv(`clinical.html?id=${currentPatientId}&tab=diagnostico`), 1500);
             } else {
                 // SOLO GUARDAR
                  setTimeout(() => {
@@ -5339,12 +5280,12 @@ async function saveDynamicService(servicio, generatePdf, btn, recetaData) {
             }
         } else {
             // ERROR DEL SERVIDOR
-            if(pdfWindow) pdfWindow.close();
+            hideSavingOverlay();
             alert("❌ ERROR DEL SERVIDOR:\n" + res.message);
             btn.disabled = false; btn.innerHTML = originalText;
         }
     } catch (e) {
-        if(pdfWindow) pdfWindow.close();
+        hideSavingOverlay();
         console.error(e);
         alert("Error: " + e.message);
         btn.disabled = false; btn.innerHTML = originalText;
@@ -5503,9 +5444,9 @@ function ensureSignModalsExist() {
     div.innerHTML = `
     <div class="modal-overlay" id="modalDocumentOptions">
         <div class="modal-box modal-box-fancy" style="max-width:400px;">
-            <div class="modal-header modal-header-fancy" style="--mh-bg: linear-gradient(135deg, #2980b9, #1f5f8b);">
-                <h3 id="docOptionsTitle"><i class="fas fa-file-alt"></i> Opciones</h3>
-                <span class="close-modal" onclick="closeModal('modalDocumentOptions')">&times;</span>
+            <div class="modal-header modal-header-fancy" style="--mh-bg: linear-gradient(135deg, #2980b9, #1f5f8b); display: flex; justify-content: space-between; align-items: center; gap: 15px;">
+                <h3 id="docOptionsTitle" style="margin:0; flex:1; font-size:1.2rem; line-height:1.2;"><i class="fas fa-file-alt"></i> Opciones</h3>
+                <span class="close-modal" onclick="closeModal('modalDocumentOptions')" style="font-size:28px; cursor:pointer;">&times;</span>
             </div>
             <div class="modal-body" style="text-align: center;">
                 <p style="margin-bottom: 20px; color:#555;">¿Qué deseas hacer con este documento?</p>
@@ -5522,9 +5463,9 @@ function ensureSignModalsExist() {
     </div>
     <div class="modal-overlay" id="modalSignExisting">
         <div class="modal-box modal-box-fancy" style="max-width:500px;">
-            <div class="modal-header modal-header-fancy" style="--mh-bg: linear-gradient(135deg, #27ae60, #1e8449);">
-                <h3><i class="fas fa-file-signature"></i> Firmar Documento</h3>
-                <span class="close-modal" onclick="closeModal('modalSignExisting')">&times;</span>
+            <div class="modal-header modal-header-fancy" style="--mh-bg: linear-gradient(135deg, #27ae60, #1e8449); display: flex; justify-content: space-between; align-items: center; gap: 15px;">
+                <h3 style="margin:0; flex:1; font-size:1.2rem; line-height:1.2;"><i class="fas fa-file-signature"></i> Firmar Documento</h3>
+                <span class="close-modal" onclick="closeModal('modalSignExisting')" style="font-size:28px; cursor:pointer;">&times;</span>
             </div>
             <div class="modal-body">
                 <form onsubmit="event.preventDefault(); applySignExisting();">
@@ -5548,9 +5489,9 @@ function ensureSignModalsExist() {
     </div>
     <div class="modal-overlay" id="modalSignPosition" style="z-index:9999;">
         <div class="modal-box" style="max-width: 95vw; max-height: 95vh; width: 850px; height: 90vh; display: flex; flex-direction: column; padding:0; overflow:hidden; background:#f4f6f8;">
-        <div class="modal-header modal-header-fancy" style="--mh-bg: linear-gradient(135deg, #27ae60, #1e8449); padding: 15px 20px; display: flex; justify-content: space-between; align-items: center; gap: 15px;">
-            <h3 style="color:white; margin:0; font-size:1.1rem; flex: 1; word-break: break-word; line-height: 1.3;"><i class="fas fa-hand-pointer"></i> Arrastra la firma a la posición deseada</h3>
-            <span class="close-modal" id="closeSignPosition" style="color:white; opacity:0.8; font-size:28px; cursor:pointer;">&times;</span>
+            <div class="modal-header modal-header-fancy" style="--mh-bg: linear-gradient(135deg, #27ae60, #1e8449); padding: 15px 20px; margin: 0; border-radius: 20px 20px 0 0; display: flex; justify-content: space-between; align-items: center; gap: 15px;">
+                <h3 style="color:white; margin:0; font-size:1.1rem; flex: 1; line-height: 1.3;"><i class="fas fa-hand-pointer"></i> Arrastra la firma a la posición deseada</h3>
+                <span class="close-modal" id="closeSignPosition" style="color:white; opacity:0.8; font-size:28px; cursor:pointer;">&times;</span>
             </div>
             <div class="modal-body" style="flex: 1; overflow: auto; background: #525659; display: flex; justify-content: center; padding: 20px; position: relative;">
                 <div id="pdfRenderContainer" style="position: relative; box-shadow: 0 0 10px rgba(0,0,0,0.5); display:inline-block; line-height:0; background:white;">
@@ -5671,9 +5612,7 @@ window.applySignExisting = async function() {
         
         document.getElementById('dragCertName').innerText = certName;
         const dragEl = document.getElementById('signatureDraggable');
-        const canvasW = canvas.offsetWidth || canvas.width; const canvasH = canvas.offsetHeight || canvas.height;
-        const dragW = dragEl.offsetWidth || 170; const dragH = dragEl.offsetHeight || 45;
-        dragEl.style.left = Math.max(0, (canvasW / 2) - (dragW / 2)) + 'px'; dragEl.style.top = '30px';
+        dragEl.style.left = '30px'; dragEl.style.top = '30px';
         
         openModal('modalSignPosition');
         
