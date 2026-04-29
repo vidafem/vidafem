@@ -1,6 +1,9 @@
 // js/config.js
 // Configuracion global de conexion
 
+const APP_GIT_VERSION = "d102a91";
+console.log(`%c VIDAFEM %c Version: ${APP_GIT_VERSION} `, "background:#36235d; color:white; font-weight:bold; padding:4px 8px; border-radius:4px 0 0 4px;", "background:#27ae60; color:white; font-weight:bold; padding:4px 8px; border-radius:0 4px 4px 0;");
+
 const PROD_API_URL = "https://script.google.com/macros/s/AKfycbxnfbCeCIQa8BWLfJwh6J20SNSksLEcHYdthf9mEfyev8tLF5wYg4uo7BsaMA5R4-NZUw/exec";
 const TEST_API_URL = "https://script.google.com/macros/s/AKfycbxnfbCeCIQa8BWLfJwh6J20SNSksLEcHYdthf9mEfyev8tLF5wYg4uo7BsaMA5R4-NZUw/exec";
 const VF_ENV_STORAGE_KEY = "vidafem_runtime_env";
