@@ -199,6 +199,19 @@
                                 <div class="detail-item"><label>Tiempo de Uso</label> <input type="text" name="tiempo_uso" class="input-field history-input" disabled></div>
                             </div>
                         </div>
+                              <div class="form-group">
+    <label>¿Antecedentes de ITS?</label>
+    <select name="ante_its" class="history-input doc-input" onchange="toggleItsField()">
+        <option value="">-- Seleccionar --</option>
+        <option value="SI">SÍ</option>
+        <option value="NO">NO</option>
+    </select>
+</div>
+<div class="form-group">
+    <label>Tipo de ITS</label>
+    <input type="text" name="tipo_its" class="history-input doc-input" placeholder="Ej: VPH, Sífilis..." disabled>
+</div>
+                        
 
                     </form> </div>
 

@@ -1,4 +1,4 @@
-﻿// ==========================================
+﻿﻿// ==========================================
 // 1. UTILIDADES BÁSICAS (Helpers)
 // ==========================================
 
@@ -2088,6 +2088,8 @@ function buildClinicalHistoryFromSheetRow_(headers, row) {
     tipo_anti: String(rowObj.tipo_anti || "").trim(),
     tiempo_uso: String(rowObj.tiempo_uso || "").trim(),
     tipo_ultimo: tipoUlt,
+    ante_its: String(rowObj.ante_its || "").trim(),
+    tipo_its: String(rowObj.tipo_its || "").trim(),
     fecha_actualizacion: rowObj.fecha_actualizacion || ""
   };
 }

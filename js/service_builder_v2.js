@@ -389,7 +389,8 @@
       '<option value="ago_a">Abortos (A)</option><option value="fecha_aborto">Fecha Aborto / Últ.</option>' +
       '<option value="pap">PAP</option><option value="fum">FUM</option>' +
       '<option value="anticonceptivos">Anticonceptivos</option><option value="tipo_anti">Tipo Anticonceptivo</option>' +
-      '<option value="tiempo_uso">Tiempo Uso</option>' +
+      '<option value="tiempo_uso">Tiempo Uso</option><option value="ante_its">Ante. ITS</option>' +
+      '<option value="tipo_its">Tipo ITS</option>' +
       '</select>' +
       '<button type="button" class="sbv2-btn" onclick="window.addAgoChip(this)" style="background:#3498db; color:white;">Agregar</button>' +
       '</div>' +
