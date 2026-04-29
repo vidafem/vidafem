@@ -1,7 +1,7 @@
 name = "vidafem-api"
 main = "src/index.js"
 compatibility_date = "2026-03-26"
-workers_dev = true
+compatibility_flags = [ "nodejs_compat" ]
 
 [vars]
 SUPABASE_URL = "https://nldwczwzncgdcvddyolw.supabase.co"
