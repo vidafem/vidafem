@@ -5,7 +5,7 @@ const APP_GIT_VERSION = "d102a91";
 console.log(`%c VIDAFEM %c Version: ${APP_GIT_VERSION} `, "background:#36235d; color:white; font-weight:bold; padding:4px 8px; border-radius:4px 0 0 4px;", "background:#27ae60; color:white; font-weight:bold; padding:4px 8px; border-radius:0 4px 4px 0;");
 
 // --- OBTENER VERSIÓN DINÁMICA DESDE GITHUB ---
-const GITHUB_REPO = "TU_USUARIO/TU_REPOSITORIO"; // Ej: "Joselyn/VIDAFEM"
+const GITHUB_REPO = "vidafem/vidafem"; // Ej: "Joselyn/VIDAFEM"
 const GITHUB_BRANCH = "main"; // o "master", dependiendo de cómo se llame tu rama
 
 fetch(`https://api.github.com/repos/${GITHUB_REPO}/commits/${GITHUB_BRANCH}`)
