@@ -1828,7 +1828,10 @@ function ensureSignModalsExist() {
                     </p>
                     <div class="form-group" style="margin-bottom:15px;">
                         <label style="font-weight:bold; color:#2c3e50;">Contraseña de tu Firma (PIN)</label>
-                        <input type="password" id="signExistingPassword" class="doc-input" placeholder="Ingresa la clave de tu bóveda" required style="width:100%;">
+                        <div style="position:relative;">
+                            <input type="password" id="signExistingPassword" class="doc-input" placeholder="Ingresa la clave de tu bóveda" required style="width:100%; padding-right:40px;">
+                            <i class="fas fa-eye" id="toggleSignExistingPassword" style="position:absolute; right:12px; top:50%; transform:translateY(-50%); cursor:pointer; color:#7f8c8d;" onclick="toggleSignExistingPasswordVisibility()" title="Mostrar/Ocultar contraseña"></i>
+                        </div>
                     </div>
                     <div style="margin-top:16px; text-align:right; display:flex; justify-content:flex-end; gap:10px;">
                         <button type="button" class="btn-primary-small" style="background:#666;" onclick="closeModal('modalSignExisting')">Cancelar</button>
@@ -1842,6 +1845,20 @@ function ensureSignModalsExist() {
     document.body.appendChild(div);
 }
 document.addEventListener("DOMContentLoaded", ensureSignModalsExist);
+
+window.toggleSignExistingPasswordVisibility = function() {
+    const input = document.getElementById("signExistingPassword");
+    const icon = document.getElementById("toggleSignExistingPassword");
+    if (input && icon) {
+        if (input.type === "password") {
+            input.type = "text";
+            icon.classList.replace("fa-eye", "fa-eye-slash");
+        } else {
+            input.type = "password";
+            icon.classList.replace("fa-eye-slash", "fa-eye");
+        }
+    }
+};
 
 window.openDocumentOptionsModal = function(url, assetType, assetId, reportId, docTitle) {
     currentSignTarget = { url, assetType, assetId, reportId };
@@ -1871,7 +1888,8 @@ window.applySignExisting = async function() {
     btn.disabled = true;
     btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Procesando...';
     try {
-        if (!window.PDFLib) e((resolve, reject) => {
+        if (!window.PDFLib) {
+            await new Promise((resolve, reject) => {
                 const script = document.createElement('script');
                 script.src = "https://cdnjs.cloudflare.com/ajax/libs/pdf-lib/1.17.1/pdf-lib.min.js";
                 script.onload = resolve;
