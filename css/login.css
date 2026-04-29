@@ -306,6 +306,12 @@ html, body {
         justify-content: center;
         padding: 2rem 2.2rem;
         box-shadow: 0 15px 35px rgba(34, 20, 61, 0.15); /* Sombra más sutil */
+        transition: transform 0.4s ease, box-shadow 0.4s ease;
+    }
+
+    .form-side:hover {
+        transform: translateY(-5px);
+        box-shadow: 0 25px 45px rgba(34, 20, 61, 0.22);
     }
 
     .form-logo {
