@@ -5643,7 +5643,7 @@ window.applySignExisting = async function() {
         pdfDoc.setTitle('Documento Médico VIDAFEM');
         pdfDoc.setCreator('VIDAFEM System');
         pdfDoc.setProducer('VIDAFEM');
-        const pdfBytes = await pdfDoc.save();
+        const pdfBytes = await pdfDoc.save({ useObjectStreams: false });
         
         let binary = ''; const chunkSize = 32768;
         for (let i = 0; i < pdfBytes.length; i += chunkSize) {

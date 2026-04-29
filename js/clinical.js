@@ -1919,7 +1919,7 @@ window.applySignExisting = async function() {
         lastPage.drawText(certName, { x: x + qrSize + 10, y: y + 20, size: 10, font: helveticaBold, color: window.PDFLib.rgb(0, 0, 0) });
         lastPage.drawText("Validez verificable mediante aplicativo FirmaEC.", { x: x + qrSize + 10, y: y + 5, size: 7, font: helvetica, color: window.PDFLib.rgb(0.4, 0.4, 0.4) });
         pdfDoc.setTitle('Documento Médico VIDAFEM'); pdfDoc.setCreator('VIDAFEM System'); pdfDoc.setProducer('VIDAFEM');
-        const pdfBytes = await pdfDoc.save();
+        const pdfBytes = await pdfDoc.save({ useObjectStreams: false });
         let binary = ''; const chunkSize = 32768;
         for (let i = 0; i < pdfBytes.length; i += chunkSize) binary += String.fromCharCode.apply(null, pdfBytes.subarray(i, i + chunkSize));
         const pdfBase64 = "data:application/pdf;base64," + window.btoa(binary);
