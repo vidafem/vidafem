@@ -984,7 +984,8 @@ function buildDiagnosisTemplatePatientHeaderHtml_(payload, generatedAtText) {
   const ageText = getDiagnosisPatientAgeForPdf_();
   const cedula = getDiagnosisPatientCedulaForPdf_();
   return ""
-    + "<table style=\"width:100%;border-collapse:collapse;margin:0 0 4mm 0;font-size:10pt;color:#1f2937;\">"
+    + "<div style=\"background-color: rgba(181, 179, 218, 0.5); border-radius: 2.5mm; padding: 3mm 4mm; margin: 0 0 5mm 0;\">"
+    + "<table style=\"width:100%;border-collapse:collapse;margin:0;font-size:10pt;color:#1f2937;\">"
     + "<tr>"
     + "<td style=\"padding:0 0 1.2mm 0;font-weight:700;\">PACIENTE: " + escapeHtmlDiagnosis_(patientName) + "</td>"
     + "<td style=\"padding:0 0 1.2mm 0;font-weight:700;text-align:right;\">EDAD: " + escapeHtmlDiagnosis_(ageText) + "</td>"
@@ -993,7 +994,8 @@ function buildDiagnosisTemplatePatientHeaderHtml_(payload, generatedAtText) {
     + "<td style=\"padding:0;font-weight:700;\">C.I.: " + escapeHtmlDiagnosis_(cedula) + "</td>"
     + "<td style=\"padding:0;font-weight:700;text-align:right;\">FECHA: " + escapeHtmlDiagnosis_(generatedAtText) + "</td>"
     + "</tr>"
-    + "</table>";
+    + "</table>"
+    + "</div>";
 }
 
 function formatDiagnosisDoctorRoleForSignature_(value) {
