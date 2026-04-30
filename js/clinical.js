@@ -1337,6 +1337,66 @@ function goToNewDiagnosis() {
 }
 
 // ==========================================
+// MODAL GALERÍA DE ECOGRAFÍAS
+// ==========================================
+let currentEcoImages = [];
+let currentEcoIndex = 0;
+
+window.ensureEcoGalleryModal = function() {
+    if (document.getElementById('modalEcoGallery')) return;
+    const html = `
+    <div class="modal-overlay" id="modalEcoGallery" style="backdrop-filter: blur(8px); background: rgba(0,0,0,0.85); z-index: 100000;">
+        <div style="position:relative; width:95%; max-width:900px; height:85vh; display:flex; flex-direction:column; align-items:center; justify-content:center; margin:auto;">
+            <button onclick="closeModal('modalEcoGallery')" style="position:absolute; top:-35px; right:0; background:none; border:none; color:white; font-size:35px; cursor:pointer; text-shadow:0 2px 5px rgba(0,0,0,0.5);">&times;</button>
+            
+            <div style="flex:1; display:flex; justify-content:center; align-items:center; width:100%; overflow:hidden;">
+                <img id="ecoCarouselImage" src="" style="max-width:100%; max-height:100%; object-fit:contain; border-radius:8px; box-shadow:0 5px 25px rgba(0,0,0,0.5);">
+            </div>
+            
+            <div style="display:flex; justify-content:center; align-items:center; gap:20px; margin-top:20px; width:100%; padding-bottom:10px;">
+                <button onclick="changeEcoGallerySlide(-1)" style="background:rgba(255,255,255,0.2); color:white; border:none; border-radius:50%; width:50px; height:50px; font-size:20px; cursor:pointer; transition:0.3s;"><i class="fas fa-chevron-left"></i></button>
+                <span id="ecoCarouselCounter" style="color:white; font-size:16px; font-weight:bold; min-width:60px; text-align:center;">1 / 1</span>
+                <button onclick="changeEcoGallerySlide(1)" style="background:rgba(255,255,255,0.2); color:white; border:none; border-radius:50%; width:50px; height:50px; font-size:20px; cursor:pointer; transition:0.3s;"><i class="fas fa-chevron-right"></i></button>
+                <a id="btnEcoDownload" href="#" download="ecografia.jpg" class="btn-primary-small" style="background:#e84393; border:none; text-decoration:none; margin-left:20px; padding:10px 20px;"><i class="fas fa-download"></i> Descargar</a>
+            </div>
+        </div>
+    </div>
+    `;
+    document.body.insertAdjacentHTML('beforeend', html);
+};
+
+window.openEcoGalleryModal = function(encodedEcos) {
+    ensureEcoGalleryModal();
+    try {
+        currentEcoImages = JSON.parse(decodeURIComponent(encodedEcos));
+        if (!currentEcoImages || !currentEcoImages.length) return;
+        currentEcoIndex = 0;
+        updateEcoGallerySlide();
+        openModal('modalEcoGallery');
+    } catch(e) { console.error(e); alert("No se pudo cargar la galería."); }
+};
+
+window.changeEcoGallerySlide = function(dir) {
+    currentEcoIndex += dir;
+    if (currentEcoIndex < 0) currentEcoIndex = currentEcoImages.length - 1;
+    if (currentEcoIndex >= currentEcoImages.length) currentEcoIndex = 0;
+    updateEcoGallerySlide();
+};
+
+window.updateEcoGallerySlide = function() {
+    const imgEl = document.getElementById('ecoCarouselImage');
+    const counterEl = document.getElementById('ecoCarouselCounter');
+    const downloadBtn = document.getElementById('btnEcoDownload');
+    if (!imgEl || !currentEcoImages.length) return;
+    
+    const item = currentEcoImages[currentEcoIndex];
+    imgEl.src = item.url || item.data;
+    counterEl.innerText = (currentEcoIndex + 1) + " / " + currentEcoImages.length;
+    downloadBtn.href = item.url || item.data;
+    downloadBtn.download = item.name || ("ecografia_" + (currentEcoIndex + 1) + ".jpg");
+};
+
+// ==========================================
 // 4. MÓDULO DE DIAGNÓSTICOS (VISUALIZACIÓN)
 // ==========================================
 
@@ -1402,6 +1462,15 @@ function loadDiagnosisHistory() {
                     botonesHtml += docLinks.external_pdfs.map((item) => {
                         return buildDiagnosisAssetViewHtml_("external_pdf", item.url, item.label, rep.id_reporte, item.id);
                     }).join("");
+                }
+                
+                // D. VER GALERÍA DE ECOGRAFÍAS
+                if (extraData && extraData.galeria_eco && extraData.galeria_eco.length > 0) {
+                    const encodedEcos = encodeURIComponent(JSON.stringify(extraData.galeria_eco));
+                    botonesHtml += `
+                        <button onclick="openEcoGalleryModal('${encodedEcos}')" class="btn-mini" style="background:#e84393; color:white; border:none; padding:5px 10px; border-radius:4px; font-size:0.85rem; cursor:pointer;">
+                            <i class="fas fa-images"></i> Galería Eco
+                        </button>`;
                 }
 
                 // D. EDITAR (Solo carga los datos en el formulario)

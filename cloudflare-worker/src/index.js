@@ -5408,6 +5408,35 @@ async function prepareDiagnosisPersistenceWorker_(env, payload, options) {
     out.pdf_externos = pdfs;
   }
 
+  if (Object.prototype.hasOwnProperty.call(src, "galeria_eco")) {
+    const ecos = [];
+    const list = Array.isArray(src.galeria_eco) ? src.galeria_eco : [];
+    for (let i = 0; i < list.length; i++) {
+      const item = list[i] && typeof list[i] === "object" ? list[i] : {};
+      const uploadedData = normalizeText_(item.data);
+      if (uploadedData) {
+        const upload = await uploadDataUrlToWorkerStorage_(
+          env,
+          requestUrl,
+          joinStorageObjectKey_([
+            patientId,
+            reportId,
+            "ecografias",
+            "eco_" + (i + 1) + "_" + randomHex_(6) + ".jpg"
+          ]),
+          uploadedData
+        );
+        if (!upload.success) {
+          return { success: false, status: 500, message: upload.message || "No se pudo guardar una ecografia." };
+        }
+        ecos.push({ url: upload.url, name: item.name || ("eco_" + (i + 1) + ".jpg") });
+        continue;
+      }
+      if (item.url) ecos.push({ url: item.url, name: item.name });
+    }
+    out.galeria_eco = ecos;
+  }
+
   const reportPdfDataUrl = normalizeText_(src.report_pdf_data_url);
   if (reportPdfDataUrl) {
     let finalReportPdfDataUrl = reportPdfDataUrl;
@@ -5767,6 +5796,12 @@ function buildDiagnosisStoragePayload_(payload, options) {
     ? normalizeText_(out.pdf_externos[0].url)
     : "";
 
+  if (Object.prototype.hasOwnProperty.call(data, "galeria_eco")) {
+    out.galeria_eco = data.galeria_eco;
+  } else if (Array.isArray(oldPayload.galeria_eco)) {
+    out.galeria_eco = oldPayload.galeria_eco;
+  }
+
   if (Array.isArray(oldPayload.drive_file_ids)) out.drive_file_ids = oldPayload.drive_file_ids.slice();
   if (normalizeText_(oldPayload.report_folder_id)) out.report_folder_id = normalizeText_(oldPayload.report_folder_id);
 
@@ -5953,6 +5988,11 @@ function reportContainsFileIdWorker_(report, fileId) {
     const current = externalItems[i] || {};
     if (normalizeText_(current.file_id || current.fileId) === target) return true;
     if (extractDriveFileIdFromUrlWorker_(current.url || current.pdf_externo_link) === target) return true;
+  }
+
+  const ecos = Array.isArray(data.galeria_eco) ? data.galeria_eco : [];
+  for (let i = 0; i < ecos.length; i++) {
+    add(ecos[i] && ecos[i].url);
   }
 
   return false;

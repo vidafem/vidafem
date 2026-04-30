@@ -10,6 +10,7 @@ let currentExternalPdfItems = [];
 let externalPdfLocalSeq = 0;
 let currentMedicalCertificate = null;
 let patientHistoryCache = null;
+let currentEcoGalleryItems = [];
 // Ya no usamos existingFileIds fija, todo se lee del DOM
 
 // VARIABLES EDITOR
@@ -2362,6 +2363,108 @@ document.addEventListener("DOMContentLoaded", () => {
 });
 
 // ==========================================
+// NUEVO: MÓDULO GALERÍA DE ECOGRAFÍAS
+// ==========================================
+function ensureEcoGalleryUI() {
+    if (document.getElementById("ecoGalleryContainer")) return;
+    const btnCert = document.getElementById("btnOpenMedicalCertificate");
+    const certContainer = document.getElementById("medicalCertificateContainer");
+    if (!btnCert || !certContainer) {
+        setTimeout(ensureEcoGalleryUI, 500);
+        return;
+    }
+
+    const btnEco = document.createElement("button");
+    btnEco.type = "button";
+    btnEco.id = "btnOpenEcoGallery";
+    btnEco.className = "btn-submit";
+    btnEco.style.background = "#e84393";
+    btnEco.style.marginTop = "10px";
+    btnEco.innerHTML = '<i class="fas fa-images"></i> Agregar Galería de Ecografías';
+    btnEco.onclick = () => toggleEcoGalleryModule(true);
+    btnCert.parentNode.insertBefore(btnEco, btnCert.nextSibling);
+
+    const ecoHtml = `
+    <div id="ecoGalleryContainer" class="hidden" style="margin-top: 15px; padding: 15px; border: 1px solid #ddd; border-radius: 8px; background: #fffcfd;">
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 10px;">
+            <h4 style="margin:0; color:#e84393;"><i class="fas fa-images"></i> Galería de Ecografías (Exclusivo Digital)</h4>
+            <button type="button" onclick="toggleEcoGalleryModule(false)" style="color:red; background:none; border:none; cursor:pointer; font-weight:bold;"><i class="fas fa-times"></i> Quitar</button>
+        </div>
+        <p style="font-size:0.85rem; color:#666; margin-bottom:10px;">Sube las fotos originales de las ecografías para preservarlas intactas en el historial. Estas fotos no se comprimen ni se incluyen en el reporte PDF.</p>
+        <input type="file" id="ecoGalleryInput" accept="image/*" multiple style="display:none;" onchange="handleEcoGalleryFiles(this)">
+        <button type="button" onclick="document.getElementById('ecoGalleryInput').click()" class="btn-primary-small" style="background:#e84393; border:none; color:white; padding:8px 15px; border-radius:5px; cursor:pointer;">
+            <i class="fas fa-upload"></i> Seleccionar Fotos
+        </button>
+        <div id="ecoGalleryPreview" style="display:flex; flex-wrap:wrap; gap:10px; margin-top:15px;"></div>
+    </div>
+    `;
+    certContainer.insertAdjacentHTML('afterend', ecoHtml);
+}
+
+window.toggleEcoGalleryModule = function(show) {
+    const btn = document.getElementById("btnOpenEcoGallery");
+    const container = document.getElementById("ecoGalleryContainer");
+    if (!btn || !container) return;
+    if (show) {
+        btn.style.display = "none";
+        container.classList.remove("hidden");
+    } else {
+        if (confirm("¿Quitar la galería de ecografías? Se borrarán las imágenes adjuntas no guardadas.")) {
+            btn.style.display = "block";
+            container.classList.add("hidden");
+            currentEcoGalleryItems = [];
+            renderEcoGalleryPreview();
+        }
+    }
+};
+
+window.handleEcoGalleryFiles = async function(input) {
+    if (!input.files || !input.files.length) return;
+    for (let i = 0; i < input.files.length; i++) {
+        const file = input.files[i];
+        const reader = new FileReader();
+        reader.onload = (e) => {
+            currentEcoGalleryItems.push({
+                id: "eco_" + Date.now() + "_" + i,
+                data: e.target.result,
+                name: file.name,
+                isNew: true
+            });
+            renderEcoGalleryPreview();
+        };
+        reader.readAsDataURL(file);
+    }
+    input.value = "";
+};
+
+window.removeEcoGalleryItem = function(id) {
+    currentEcoGalleryItems = currentEcoGalleryItems.filter(item => item.id !== id);
+    renderEcoGalleryPreview();
+};
+
+window.renderEcoGalleryPreview = function() {
+    const container = document.getElementById("ecoGalleryPreview");
+    if (!container) return;
+    container.innerHTML = currentEcoGalleryItems.map(item => `
+        <div style="position:relative; width:100px; height:100px; border-radius:8px; overflow:hidden; border:1px solid #ccc; box-shadow:0 2px 5px rgba(0,0,0,0.1);">
+            <img src="${item.data || item.url}" style="width:100%; height:100%; object-fit:cover;">
+            <button type="button" onclick="removeEcoGalleryItem('${item.id}')" style="position:absolute; top:2px; right:2px; background:red; color:white; border:none; border-radius:50%; width:20px; height:20px; font-size:12px; cursor:pointer; display:flex; align-items:center; justify-content:center;">&times;</button>
+        </div>
+    `).join("");
+};
+
+function getEcoGalleryPayloadForSave() {
+    const container = document.getElementById("ecoGalleryContainer");
+    if (container && container.classList.contains("hidden")) return [];
+    return currentEcoGalleryItems.map(item => {
+        if (item.isNew) return { name: item.name, data: item.data };
+        return { name: item.name, url: item.url };
+    });
+}
+
+document.addEventListener("DOMContentLoaded", ensureEcoGalleryUI);
+
+// ==========================================
 // 1. GESTIÓN DE FOTOS DINÁMICAS (NUEVO SISTEMA)
 // ==========================================
 
@@ -3334,6 +3437,7 @@ async function saveDiagnosis(generarPdf, btn) {
       diagnostico: getValSafe("colpo_diagnostico"),
       biopsia: getValSafe("colpo_biopsia"),
       recomendaciones: getValSafe("colpo_recomendaciones"),
+      galeria_eco: getEcoGalleryPayloadForSave(),
       
       // Datos adjuntos (Ahora sí viajan correctamente)
       imagenes: imgs,
@@ -3389,6 +3493,7 @@ function saveRecipe(generarPdf, btn) {
     out.observaciones_receta = universal ? String(universal.observaciones_receta || "").trim() : "";
     out.certificado_medico = certData;
     out.pdf_externos = pdfFiles;
+    out.galeria_eco = getEcoGalleryPayloadForSave();
     return out;
   });
 }
@@ -3409,6 +3514,7 @@ function saveGeneral(generarPdf, btn) {
     }
     out.certificado_medico = getMedicalCertificateDataForSave_();
     out.pdf_externos = pdfFiles;
+    out.galeria_eco = getEcoGalleryPayloadForSave();
     return out;
   });
 }
@@ -4150,6 +4256,26 @@ function loadReportForEdit(reportId) {
           toggleMedicalCertificateModule(true);
         }
       }
+      
+      // GALERIA ECOGRAFIAS
+      if (data.galeria_eco && Array.isArray(data.galeria_eco) && data.galeria_eco.length > 0) {
+        if (typeof toggleEcoGalleryModule === "function") toggleEcoGalleryModule(true);
+        currentEcoGalleryItems = data.galeria_eco.map((item, i) => ({
+          id: "eco_loaded_" + i,
+          url: item.url,
+          name: item.name,
+          isNew: false
+        }));
+        if (typeof renderEcoGalleryPreview === "function") renderEcoGalleryPreview();
+      } else {
+        currentEcoGalleryItems = [];
+        if (typeof renderEcoGalleryPreview === "function") renderEcoGalleryPreview();
+        const ecoContainer = document.getElementById("ecoGalleryContainer");
+        const btnEco = document.getElementById("btnOpenEcoGallery");
+        if (ecoContainer) ecoContainer.classList.add("hidden");
+        if (btnEco) btnEco.style.display = "block";
+      }
+      
       console.log("Datos cargados. Activando detector de cambios.");
       setTimeout(() => {
         hasUnsavedChanges = false;
@@ -5123,6 +5249,7 @@ function saveExternalPdfOnly(generarPdf, btn) {
         }
         out.certificado_medico = getMedicalCertificateDataForSave_();
         out.pdf_externos = pdfFiles;
+        out.galeria_eco = getEcoGalleryPayloadForSave();
         return out;
     });
 }
@@ -5158,6 +5285,7 @@ function saveEverything(generarPdf, btn) {
         }
         out.certificado_medico = getMedicalCertificateDataForSave_();
         out.pdf_externos = pdfFiles;
+        out.galeria_eco = getEcoGalleryPayloadForSave();
         return out;
     });
 }
@@ -5279,6 +5407,7 @@ async function saveDynamicService(servicio, generatePdf, btn, recetaData) {
             generar_pdf: generatePdf,
             incluir_firma_virtual: shouldIncludeVirtualSignature_(),
             datos_json: datosDinamicos, 
+            galeria_eco: getEcoGalleryPayloadForSave(),
             medicamentos: recetaData ? recetaData.medicamentos : [],
             observaciones_receta: recetaData ? recetaData.observaciones_receta : "",
             certificado_medico: certData,
