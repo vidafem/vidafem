@@ -1341,6 +1341,7 @@ function goToNewDiagnosis() {
 // ==========================================
 let currentEcoImages = [];
 let currentEcoIndex = 0;
+let currentEcoDate = "";
 
 window.ensureEcoGalleryModal = function() {
     if (document.getElementById('modalEcoGallery')) return;
@@ -1353,11 +1354,14 @@ window.ensureEcoGalleryModal = function() {
                 <img id="ecoCarouselImage" src="" style="max-width:100%; max-height:100%; object-fit:contain; border-radius:8px; box-shadow:0 5px 25px rgba(0,0,0,0.5);">
             </div>
             
-            <div style="display:flex; justify-content:center; align-items:center; gap:20px; margin-top:20px; width:100%; padding-bottom:10px;">
+            <div style="display:flex; justify-content:center; align-items:center; gap:15px; margin-top:20px; width:100%; padding-bottom:10px; flex-wrap:wrap;">
                 <button onclick="changeEcoGallerySlide(-1)" style="background:rgba(255,255,255,0.2); color:white; border:none; border-radius:50%; width:50px; height:50px; font-size:20px; cursor:pointer; transition:0.3s;"><i class="fas fa-chevron-left"></i></button>
-                <span id="ecoCarouselCounter" style="color:white; font-size:16px; font-weight:bold; min-width:60px; text-align:center;">1 / 1</span>
+                <div style="text-align:center;">
+                    <div id="ecoCarouselCounter" style="color:white; font-size:16px; font-weight:bold; min-width:60px;">1 / 1</div>
+                    <div id="ecoCarouselDate" style="color:#bdc3c7; font-size:12px; margin-top:4px;"></div>
+                </div>
                 <button onclick="changeEcoGallerySlide(1)" style="background:rgba(255,255,255,0.2); color:white; border:none; border-radius:50%; width:50px; height:50px; font-size:20px; cursor:pointer; transition:0.3s;"><i class="fas fa-chevron-right"></i></button>
-                <a id="btnEcoDownload" href="#" download="ecografia.jpg" class="btn-primary-small" style="background:#e84393; border:none; text-decoration:none; margin-left:20px; padding:10px 20px;"><i class="fas fa-download"></i> Descargar</a>
+                <button id="btnEcoDownload" type="button" class="btn-primary-small" style="background:#e84393; border:none; color:white; cursor:pointer; margin-left:10px; padding:10px 20px;"><i class="fas fa-download"></i> Descargar</button>
             </div>
         </div>
     </div>
@@ -1365,12 +1369,13 @@ window.ensureEcoGalleryModal = function() {
     document.body.insertAdjacentHTML('beforeend', html);
 };
 
-window.openEcoGalleryModal = function(encodedEcos) {
+window.openEcoGalleryModal = function(encodedEcos, dateStr) {
     ensureEcoGalleryModal();
     try {
         currentEcoImages = JSON.parse(decodeURIComponent(encodedEcos));
         if (!currentEcoImages || !currentEcoImages.length) return;
         currentEcoIndex = 0;
+        currentEcoDate = dateStr || "";
         updateEcoGallerySlide();
         openModal('modalEcoGallery');
     } catch(e) { console.error(e); alert("No se pudo cargar la galería."); }
@@ -1386,14 +1391,41 @@ window.changeEcoGallerySlide = function(dir) {
 window.updateEcoGallerySlide = function() {
     const imgEl = document.getElementById('ecoCarouselImage');
     const counterEl = document.getElementById('ecoCarouselCounter');
+    const dateEl = document.getElementById('ecoCarouselDate');
     const downloadBtn = document.getElementById('btnEcoDownload');
     if (!imgEl || !currentEcoImages.length) return;
     
     const item = currentEcoImages[currentEcoIndex];
-    imgEl.src = item.url || item.data;
+    const url = item.url || item.data;
+    imgEl.src = url;
     counterEl.innerText = (currentEcoIndex + 1) + " / " + currentEcoImages.length;
-    downloadBtn.href = item.url || item.data;
-    downloadBtn.download = item.name || ("ecografia_" + (currentEcoIndex + 1) + ".jpg");
+    if (dateEl) dateEl.innerText = currentEcoDate ? "Subida el: " + currentEcoDate : "";
+    
+    const filename = item.name || ("ecografia_" + (currentEcoIndex + 1) + ".jpg");
+    downloadBtn.onclick = () => forceEcoDownload(url, filename, downloadBtn);
+};
+
+window.forceEcoDownload = async function(url, filename, btn) {
+    const originalHtml = btn.innerHTML;
+    btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Descargando...';
+    btn.disabled = true;
+    try {
+        const response = await fetch(url);
+        const blob = await response.blob();
+        const blobUrl = window.URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = blobUrl;
+        a.download = filename;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        window.URL.revokeObjectURL(blobUrl);
+    } catch(e) {
+        window.open(url, '_blank');
+    } finally {
+        btn.innerHTML = originalHtml;
+        btn.disabled = false;
+    }
 };
 
 // ==========================================
@@ -1466,9 +1498,10 @@ function loadDiagnosisHistory() {
                 
                 // D. VER GALERÍA DE ECOGRAFÍAS
                 if (extraData && extraData.galeria_eco && extraData.galeria_eco.length > 0) {
+                    const reportDate = formatClinicalReportDate_(extraData.fecha_reporte || rep.fecha_reporte || rep.fecha);
                     const encodedEcos = encodeURIComponent(JSON.stringify(extraData.galeria_eco));
                     botonesHtml += `
-                        <button onclick="openEcoGalleryModal('${encodedEcos}')" class="btn-mini" style="background:#e84393; color:white; border:none; padding:5px 10px; border-radius:4px; font-size:0.85rem; cursor:pointer;">
+                        <button onclick="openEcoGalleryModal('${encodedEcos}', '${reportDate}')" class="btn-mini" style="background:#e84393; color:white; border:none; padding:5px 10px; border-radius:4px; font-size:0.85rem; cursor:pointer;">
                             <i class="fas fa-images"></i> Galería Eco
                         </button>`;
                 }
