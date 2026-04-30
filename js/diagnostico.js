@@ -878,7 +878,7 @@ function renderDiagnosisTemplateEntryHtml_(entry) {
 
     let html = "<section style=\"margin:0 0 6mm 0; page-break-inside:avoid;\">"
       + "<div style=\"font-size:10pt;font-weight:700;color:#36235d;margin-bottom:1.5mm;\">" + label + "</div>"
-      + "<table style=\"width:100%; border-collapse:collapse; font-size:9pt; color:#222;\">"
+      + "<div style=\"margin-left:4mm;\"><table style=\"width:100%; border-collapse:collapse; font-size:9pt; color:#222;\">"
       + "<thead><tr style=\"background:#e2e8f0;\">";
     
     headers.forEach(h => {
@@ -896,7 +896,7 @@ function renderDiagnosisTemplateEntryHtml_(entry) {
       html += "</tr>";
     });
 
-    html += "</tbody></table></section>";
+    html += "</tbody></table></div></section>";
     return html;
   }
 
@@ -904,10 +904,10 @@ function renderDiagnosisTemplateEntryHtml_(entry) {
     const selectedText = diagnosisValueToHtmlLines_(entry && entry.value);
     if (!selectedText) return "";
     return ""
-      + "<div style=\"display:inline-flex;align-items:flex-start;gap:2mm;flex-wrap:wrap;font-size:10pt;line-height:1.45;color:#222;margin:0 6mm 3mm 0;page-break-inside:avoid;\">"
-      + "<span style=\"font-weight:700;color:#36235d;\">" + label + ":</span>"
-      + "<span>" + selectedText + "</span>"
-      + "</div>";
+      + "<section style=\"margin:0 0 4mm 0; page-break-inside:avoid;\">"
+      + "<div style=\"font-size:10pt;font-weight:700;color:#36235d;margin-bottom:1mm;\">" + label + "</div>"
+      + "<div style=\"font-size:10pt;line-height:1.45;color:#222; margin-left:4mm; text-align:justify;\">" + selectedText + "</div>"
+      + "</section>";
   }
 
   if (type === "casillas_opciones") {
@@ -921,7 +921,7 @@ function renderDiagnosisTemplateEntryHtml_(entry) {
     return ""
       + "<section style=\"margin:0 0 4mm 0; page-break-inside:avoid;\">"
       + "<div style=\"font-size:10pt;font-weight:700;color:#36235d;margin-bottom:1mm;\">" + label + "</div>"
-      + "<div style=\"font-size:10pt;line-height:1.45;color:#222;\">" + linesHtml + "</div>"
+      + "<div style=\"font-size:10pt;line-height:1.45;color:#222; margin-left:4mm;\">" + linesHtml + "</div>"
       + "</section>";
   }
 
@@ -930,7 +930,7 @@ function renderDiagnosisTemplateEntryHtml_(entry) {
       return ""
           + "<section style=\"margin:0 0 4mm 0; page-break-inside:avoid;\">"
           + "<div style=\"font-size:10pt;font-weight:700;color:#36235d;margin-bottom:1.5mm;\">" + label + "</div>"
-          + "<div style=\"font-size:9.5pt;line-height:1.45;color:#222; background:#f8fafc; padding:2mm 2.5mm; border-radius:1.5mm; border:1px solid #e2e8f0;\">" 
+          + "<div style=\"font-size:9.5pt;line-height:1.45;color:#222; background:#f8fafc; padding:2mm 2.5mm; border-radius:1.5mm; border:1px solid #e2e8f0; margin-left:4mm;\">" 
           + valueHtml 
           + "</div>"
           + "</section>";
@@ -941,7 +941,7 @@ function renderDiagnosisTemplateEntryHtml_(entry) {
   return ""
     + "<section style=\"margin:0 0 4mm 0; page-break-inside:avoid;\">"
     + "<div style=\"font-size:10pt;font-weight:700;color:#36235d;margin-bottom:1mm;\">" + label + "</div>"
-    + "<div style=\"font-size:10pt;line-height:1.45;color:#222;\">" + value + "</div>"
+    + "<div style=\"font-size:10pt;line-height:1.45;color:#222; margin-left:4mm; text-align:justify;\">" + value + "</div>"
     + "</section>";
 }
 
