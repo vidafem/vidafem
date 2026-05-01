@@ -1,4 +1,5 @@
 ﻿﻿// ==========================================
+﻿﻿// ==========================================
 // 1. UTILIDADES BÁSICAS (Helpers)
 // ==========================================
 
@@ -5068,4 +5069,58 @@ function deletePatientEvolutionEntry(idEvolucion) {
   }
 
   return { success: false, message: "Evolucion no encontrada." };
+}
+
+function getInactivePatients(requester) {
+  const req = String(requester || "").trim().toLowerCase();
+  const isSuper = (typeof isSuperadminUser === "function" && isSuperadminUser(req));
+  const pSheet = getSheet("pacientes");
+  const pData = pSheet.getDataRange().getValues();
+  if (pData.length <= 1) return { success: true, data: [] };
+  
+  const pH = pData[0];
+  const pIdIdx = pH.indexOf("id_paciente");
+  const pNameIdx = pH.indexOf("nombre_completo");
+  const pCedIdx = pH.indexOf("cedula");
+  const pRegIdx = pH.indexOf("fecha_registro");
+  const pCreatorIdx = pH.indexOf("creado_por");
+  
+  const patients = [];
+  const activityMap = {};
+  
+  for (let i = 1; i < pData.length; i++) {
+      const row = pData[i];
+      const creator = String(row[pCreatorIdx] || "").trim().toLowerCase();
+      if (!isSuper && creator !== req) continue;
+      const pid = String(row[pIdIdx] || "").trim();
+      if (!pid) continue;
+      const regDate = new Date(toIsoDate(row[pRegIdx])).getTime();
+      activityMap[pid] = isNaN(regDate) ? 0 : regDate;
+      patients.push({ id_paciente: pid, cedula: String(row[pCedIdx] || "").trim(), nombre_completo: String(row[pNameIdx] || "").trim(), fecha_registro: toIsoDate(row[pRegIdx]), creado_por: creator });
+  }
+  if (!patients.length) return { success: true, data: [] };
+  const processTable = function(sheetName, dateCols, idCol) {
+      const sheet = getConnection().getSheetByName(sheetName);
+      if (!sheet) return;
+      const data = sheet.getDataRange().getValues();
+      if (data.length <= 1) return;
+      const h = data[0];
+      const idIdx = h.indexOf(idCol || "id_paciente");
+      const dateIdxs = dateCols.map(function(c) { return h.indexOf(c); }).filter(function(i) { return i !== -1; });
+      if (idIdx === -1 || !dateIdxs.length) return;
+      for (let i = 1; i < data.length; i++) {
+          const row = data[i];
+          const pid = String(row[idIdx] || "").trim();
+          if (!pid || activityMap[pid] === undefined) continue;
+          dateIdxs.forEach(function(idx) { const d = new Date(toIsoDate(row[idx])).getTime(); if (!isNaN(d) && d > activityMap[pid]) { activityMap[pid] = d; } });
+      }
+  };
+  processTable("citas", ["fecha"]);
+  processTable("diagnosticos_archivos", ["fecha"]);
+  processTable("evolucion_paciente", ["fecha_consulta", "fecha_actualizacion"]);
+  const threshold = Date.now() - (90 * 24 * 60 * 60 * 1000);
+  const inactive = [];
+  patients.forEach(function(p) { const lastAct = activityMap[p.id_paciente]; if (lastAct < threshold) { p.last_activity = lastAct > 0 ? new Date(lastAct).toISOString().split("T")[0] : "Sin fecha"; inactive.push(p); } });
+  inactive.sort(function(a, b) { return String(a.last_activity).localeCompare(String(b.last_activity)); });
+  return { success: true, data: inactive };
 }

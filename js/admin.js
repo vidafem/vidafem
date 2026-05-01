@@ -1,9 +1,10 @@
-﻿﻿﻿﻿// js/admin.js - VIDAFEM v3.1 (CRUD Completo + Modularidad)
+﻿﻿// js/admin.js - VIDAFEM v3.1 (CRUD Completo + Modularidad)
 
 let allPatients = [];
 let isDeletingPatient = false;
 const RECENT_PATIENTS_LIMIT = 5;
 let patientListMode_ = "recent";
+let allInactivePatients = [];
 let selectedPatientSummaryId_ = "";
 let adminInfographicPosts_ = [];
 let pendingInfographicImageDataUrl_ = "";
@@ -149,6 +150,7 @@ function getRecentPatients_() {
 }
 
 function getCurrentPatientsBaseList_() {
+  if (patientListMode_ === "inactive") return allInactivePatients.slice();
   return patientListMode_ === "all" ? allPatients.slice() : getRecentPatients_();
 }
 
@@ -158,6 +160,30 @@ function updatePatientsToggleButton_() {
   btn.innerHTML = patientListMode_ === "all"
     ? '<i class="fas fa-clock-rotate-left"></i> Ver recientes'
     : '<i class="fas fa-list"></i> Mostrar todos';
+  btn.style.opacity = patientListMode_ === "inactive" ? "0.5" : "1";
+
+  let inactiveBtn = document.getElementById("btnInactivePatients");
+  if (!inactiveBtn) {
+      inactiveBtn = document.createElement("button");
+      inactiveBtn.id = "btnInactivePatients";
+      inactiveBtn.className = "btn-secondary";
+      inactiveBtn.onclick = window.toggleInactivePatients;
+      inactiveBtn.style.marginLeft = "10px";
+      if (btn && btn.parentNode) btn.parentNode.insertBefore(inactiveBtn, btn.nextSibling);
+  }
+  if (inactiveBtn) {
+      if (patientListMode_ === "inactive") {
+          inactiveBtn.innerHTML = '<i class="fas fa-times"></i> Salir de inactivos';
+          inactiveBtn.style.background = "#e74c3c";
+          inactiveBtn.style.color = "white";
+          inactiveBtn.style.border = "none";
+      } else {
+          inactiveBtn.innerHTML = '<i class="fas fa-user-clock"></i> Sin movimiento (+3 meses)';
+          inactiveBtn.style.background = "#fff";
+          inactiveBtn.style.color = "#e74c3c";
+          inactiveBtn.style.border = "1px solid #e74c3c";
+      }
+  }
 }
 
 function updatePatientsTableInfo_(message) {
@@ -166,6 +192,9 @@ function updatePatientsTableInfo_(message) {
 }
 
 function buildPatientTableStatusMessage_() {
+  if (patientListMode_ === "inactive") {
+      return `Mostrando ${allInactivePatients.length} pacientes inactivos sin registros en los últimos 3 meses.`;
+  }
   if (patientListMode_ === "all") {
     return allPatients.length === 1
       ? "Mostrando 1 paciente"
@@ -194,6 +223,26 @@ function renderPatientsTableForCurrentMode_() {
   renderTable(getCurrentPatientsBaseList_());
   updatePatientsTableInfo_(buildPatientTableStatusMessage_());
 }
+
+window.toggleInactivePatients = function() {
+    if (patientListMode_ === "inactive") {
+        patientListMode_ = "recent";
+        renderPatientsTableForCurrentMode_();
+    } else {
+        patientListMode_ = "inactive";
+        const tbody = document.getElementById("patientsTableBody");
+        tbody.innerHTML = '<tr><td colspan="3" class="text-center" style="padding:40px;"><i class="fas fa-circle-notch fa-spin fa-2x" style="color:#36235d; margin-bottom:15px;"></i><br>Analizando historiales en la nube...<br><small style="color:#888;">Cruzando datos de citas, reportes y evoluciones.</small></td></tr>';
+        updatePatientsToggleButton_();
+        updatePatientsTableInfo_("Calculando pacientes inactivos...");
+        postApiWithSession_({ action: "get_inactive_patients", requester: getRequesterFromSession() })
+            .then(res => {
+                if (res.success) { allInactivePatients = res.data || []; renderPatientsTableForCurrentMode_(); }
+                else { tbody.innerHTML = `<tr><td colspan="3" class="text-center text-danger">${res.message}</td></tr>`; updatePatientsTableInfo_("Error."); }
+            }).catch(() => {
+                tbody.innerHTML = '<tr><td colspan="3" class="text-center text-danger">Error de conexión al servidor.</td></tr>'; updatePatientsTableInfo_("Error.");
+            });
+    }
+};
 
 function resetPatientsQuickView_(options = {}) {
   const shouldClearSearch = options.clearSearch !== false;
@@ -1369,6 +1418,9 @@ function renderTable(dataArray) {
     const cedula = escapeHtml_(paciente.cedula || "-");
     const nombre = escapeHtml_(paciente.nombre_completo || "SIN NOMBRE");
     const patientId = String(paciente.id_paciente || "").trim();
+    const lastActivityHtml = paciente.last_activity
+        ? `<br><small style="color:#e74c3c; font-weight:bold; margin-top:4px; display:inline-block;"><i class="fas fa-history"></i> Sin visitas desde: ${paciente.last_activity}</small>`
+        : "";
 
     tr.innerHTML = `
             <td class="patient-cell patient-cell-cedula">
@@ -1376,7 +1428,7 @@ function renderTable(dataArray) {
             </td>
             <td class="patient-cell patient-cell-name">
                 <div class="patient-name-wrap">
-                    <span class="patient-name">${nombre}</span>
+                    <span class="patient-name">${nombre}</span>${lastActivityHtml}
                 </div>
             </td>
             <td class="patient-cell patient-cell-actions">

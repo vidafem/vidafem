@@ -89,7 +89,8 @@ var LOCAL_ACTIONS = /* @__PURE__ */ new Set([
   "get_p12_status",
   "upload_p12",
   "delete_p12",
-  "sign_existing_diagnosis_asset"
+  "sign_existing_diagnosis_asset",
+  "get_inactive_patients"
 ]);
 var index_default = {
   async fetch(request, env) {
@@ -352,6 +353,8 @@ async function handleLocalAction_(action, body, env, url) {
       return handleDeleteP12_(body, env);
     case "sign_existing_diagnosis_asset":
       return handleSignExistingDiagnosisAsset_(body, env, url);
+    case "get_inactive_patients":
+      return handleGetInactivePatients_(body, env);
     default:
       return {
         status: 501,
@@ -819,6 +822,54 @@ async function handleSaveHistory_(body, env) {
   };
 }
 __name(handleSaveHistory_, "handleSaveHistory_");
+async function handleGetInactivePatients_(body, env) {
+  const validation = await validateOwnSessionAction_(env, body, { allowRoles: ["admin", "superadmin"] });
+  if (!validation.ok) return validation.result;
+  const isSuper = validation.session.role === "superadmin";
+  const filters = isSuper ? null : { creado_por: eq_(validation.session.user_id) };
+  const patientsRes = await supabaseRest_(env, "get", "pacientes", {
+    select: "id_paciente,cedula,nombre_completo,telefono,fecha_registro,creado_por",
+    filters: filters
+  });
+  if (!patientsRes.success) return errorResult_(500, "Error cargando pacientes");
+  const patients = Array.isArray(patientsRes.data) ? patientsRes.data : [];
+  if (!patients.length) return { status: 200, payload: { success: true, data: [] } };
+  const [citasRes, diagRes, evolRes] = await Promise.all([
+    supabaseRest_(env, "get", "citas", { select: "id_paciente,fecha", filters: filters }),
+    supabaseRest_(env, "get", "diagnosticos_archivos", { select: "id_paciente,fecha", filters: filters }),
+    supabaseRest_(env, "get", "evolucion_paciente", { select: "id_paciente,fecha_consulta,fecha_actualizacion", filters: filters })
+  ]);
+  const activityMap = {};
+  patients.forEach(function(p) {
+    const d = new Date(normalizeIsoDateValue_(p.fecha_registro) || 0).getTime();
+    activityMap[p.id_paciente] = isNaN(d) ? 0 : d;
+  });
+  const processRows = function(rows, dateFields) {
+    (Array.isArray(rows) ? rows : []).forEach(function(row) {
+      const pid = normalizeText_(row.id_paciente);
+      if (!pid || activityMap[pid] === void 0) return;
+      dateFields.forEach(function(f) {
+        const d = new Date(normalizeIsoDateValue_(row[f]) || 0).getTime();
+        if (!isNaN(d) && d > activityMap[pid]) activityMap[pid] = d;
+      });
+    });
+  };
+  if (citasRes.success) processRows(citasRes.data, ["fecha"]);
+  if (diagRes.success) processRows(diagRes.data, ["fecha"]);
+  if (evolRes.success) processRows(evolRes.data, ["fecha_consulta", "fecha_actualizacion"]);
+  const threshold = Date.now() - 90 * 24 * 60 * 60 * 1e3;
+  const inactivePatients = [];
+  patients.forEach(function(p) {
+    const lastActivity = activityMap[p.id_paciente];
+    if (lastActivity < threshold) {
+      p.last_activity = lastActivity > 0 ? new Date(lastActivity).toISOString().split("T")[0] : "Sin fecha";
+      inactivePatients.push(p);
+    }
+  });
+  inactivePatients.sort(function(a, b) { return String(a.last_activity).localeCompare(String(b.last_activity)); });
+  return { status: 200, payload: { success: true, data: inactivePatients } };
+}
+__name(handleGetInactivePatients_, "handleGetInactivePatients_");
 async function handleGetPatientAppointments_(body, env) {
   const access = await requireAccessiblePatientForAction_(env, body, {
     allowRoles: ["admin", "paciente", "superadmin"]
